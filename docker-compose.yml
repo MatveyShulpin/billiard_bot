@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: billiard_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Монтирование директории для БД вне контейнера
+      - ./data:/app/data
+    environment:
+      - TZ=Europe/Moscow
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
