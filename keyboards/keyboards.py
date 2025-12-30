@@ -63,7 +63,12 @@ def get_duration_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     for hours in range(settings.MIN_BOOKING_HOURS, settings.MAX_BOOKING_HOURS + 1):
-        text = f"{hours} час" if hours == 1 else f"{hours} часа"
+        if hours == 1:
+            text = f"{hours} час"
+        elif hours in [2, 3, 4]:
+            text = f"{hours} часа"
+        else:
+            text = f"{hours} часов"
         builder.button(text=text, callback_data=f"duration:{hours}")
     
     builder.button(text="◀️ Назад", callback_data="back_to_time")
@@ -139,7 +144,62 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     
     builder.button(text="📋 Брони на сегодня", callback_data="admin_today")
+    builder.button(text="📅 Просмотр броней по датам", callback_data="admin_bookings")
     builder.button(text="🏠 Главное меню", callback_data="main_menu")
+    builder.adjust(1)
+    
+    return builder.as_markup()
+
+
+def get_admin_dates_keyboard(dates: List[datetime]) -> InlineKeyboardMarkup:
+    """Клавиатура выбора даты для админа"""
+    builder = InlineKeyboardBuilder()
+    
+    for date in dates:
+        builder.button(
+            text=format_date(date),
+            callback_data=f"admin_date:{date.strftime('%Y-%m-%d')}"
+        )
+    
+    builder.button(text="◀️ Назад в админ-панель", callback_data="admin_back_to_panel")
+    builder.adjust(2)
+    
+    return builder.as_markup()
+
+
+def get_admin_bookings_keyboard(bookings: List[Booking], date: datetime) -> InlineKeyboardMarkup:
+    """Клавиатура списка бронирований для админа"""
+    builder = InlineKeyboardBuilder()
+    
+    for booking in bookings:
+        status_emoji = "✅" if booking.status == "active" else "❌"
+        text = f"{status_emoji} {format_time(booking.start_time)} - {booking.duration_hours}ч"
+        builder.button(
+            text=text,
+            callback_data=f"admin_booking:{booking.id}:{date.strftime('%Y-%m-%d')}"
+        )
+    
+    builder.button(text="◀️ Назад к датам", callback_data="admin_back_to_dates")
+    builder.adjust(1)
+    
+    return builder.as_markup()
+
+
+def get_admin_booking_detail_keyboard(booking_id: int, status: str, date_str: str = None) -> InlineKeyboardMarkup:
+    """Клавиатура действий с бронированием для админа"""
+    builder = InlineKeyboardBuilder()
+    
+    if status == "active":
+        callback_data = f"admin_cancel:{booking_id}"
+        if date_str:
+            callback_data += f":{date_str}"
+        builder.button(text="🗑 Отменить бронь", callback_data=callback_data)
+    
+    if date_str:
+        builder.button(text="◀️ Назад к списку", callback_data=f"admin_back_to_date:{date_str}")
+    else:
+        builder.button(text="◀️ Назад в админ-панель", callback_data="admin_back_to_panel")
+    
     builder.adjust(1)
     
     return builder.as_markup()
