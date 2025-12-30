@@ -64,6 +64,23 @@ class BookingRepository:
             return [BookingRepository._row_to_booking(row) for row in rows]
     
     @staticmethod
+    def get_bookings_by_date(date: datetime) -> List[Booking]:
+        """Получение всех броней на конкретную дату (включая отмененные)"""
+        date_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        date_end = date_start + timedelta(days=1)
+        
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM bookings 
+                WHERE start_time >= ? AND start_time < ?
+                ORDER BY start_time, status DESC
+            """, (date_start, date_end))
+            
+            rows = cursor.fetchall()
+            return [BookingRepository._row_to_booking(row) for row in rows]
+    
+    @staticmethod
     def cancel_booking(booking_id: int) -> bool:
         """Отмена бронирования"""
         with get_db() as conn:
