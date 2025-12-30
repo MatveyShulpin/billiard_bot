@@ -107,8 +107,19 @@ async def process_duration(callback: CallbackQuery, state: FSMContext):
     
     # Проверка, что бронирование не выходит за часы работы
     if not is_valid_booking_time(start_time, duration):
+        open_time, close_time = get_working_hours(start_time)
+        
+        # Формируем понятное сообщение о времени работы
+        if close_time.hour < open_time.hour:
+            # Закрытие после полуночи
+            close_str = f"{close_time.hour:02d}:{close_time.minute:02d} (следующего дня)"
+        else:
+            close_str = f"{close_time.hour:02d}:{close_time.minute:02d}"
+        
         await callback.answer(
-            "⚠️ Бронирование выходит за часы работы клуба",
+            f"⚠️ Бронирование выходит за часы работы!\n"
+            f"Работаем: {open_time.hour:02d}:{open_time.minute:02d} - {close_str}\n"
+            f"При длительности {duration}ч бронь закончится в {end_time.strftime('%H:%M')}",
             show_alert=True
         )
         return
