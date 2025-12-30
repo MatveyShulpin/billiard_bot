@@ -63,8 +63,12 @@ def get_available_times(date: datetime) -> List[datetime]:
             microsecond=0
         )
     
+    # Резервируем минимум 1 час до закрытия для возможности бронирования
+    # Вычитаем MIN_BOOKING_HOURS, чтобы нельзя было начать бронь слишком близко к закрытию
+    end_for_booking = end - timedelta(hours=settings.MIN_BOOKING_HOURS)
+    
     # Генерация слотов
-    while current < end:
+    while current <= end_for_booking:
         # Добавляем только будущие слоты
         if current > now:
             times.append(current)
@@ -79,6 +83,14 @@ def is_valid_booking_time(start_time: datetime, duration_hours: int) -> bool:
     """
     end_time = start_time + timedelta(hours=duration_hours)
     open_time, close_time = get_working_hours(start_time)
+    
+    # Время открытия в формате datetime для сравнения
+    open_datetime = start_time.replace(
+        hour=open_time.hour,
+        minute=open_time.minute,
+        second=0,
+        microsecond=0
+    )
     
     # Время закрытия в формате datetime
     if close_time.hour < open_time.hour:
@@ -97,7 +109,10 @@ def is_valid_booking_time(start_time: datetime, duration_hours: int) -> bool:
             microsecond=0
         )
     
-    return end_time <= close_datetime
+    # Проверяем, что:
+    # 1. Начало брони не раньше открытия
+    # 2. Конец брони не позже закрытия
+    return start_time >= open_datetime and end_time <= close_datetime
 
 
 def format_datetime(dt: datetime) -> str:
