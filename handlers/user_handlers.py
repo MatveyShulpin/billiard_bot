@@ -140,7 +140,7 @@ async def process_duration(callback: CallbackQuery, state: FSMContext):
 async def process_table(callback: CallbackQuery, state: FSMContext):
     """Обработка выбора стола"""
     table_str = callback.data.split(":")[1]
-    table_id = None if table_str == "any" else int(table_str)
+    table_id = int(table_str)
     
     data = await state.get_data()
     start_time = data['selected_time']
@@ -153,7 +153,7 @@ async def process_table(callback: CallbackQuery, state: FSMContext):
     
     if not is_available:
         await callback.answer(
-            "⚠️ К сожалению, выбранный слот уже занят. Выберите другой.",
+            "⚠️ К сожалению, выбранный стол уже занят на это время. Выберите другой.",
             show_alert=True
         )
         return
@@ -222,7 +222,7 @@ async def process_phone_number(message: Message, state: FSMContext, phone: str):
     
     if not is_available:
         await message.answer(
-            "⚠️ К сожалению, время истекло и слот был занят другим пользователем.\n"
+            "⚠️ К сожалению, время истекло и стол был занят другим пользователем.\n"
             "Начните бронирование заново.",
             reply_markup=get_main_menu_keyboard(settings.is_admin(message.from_user.id))
         )
@@ -230,10 +230,8 @@ async def process_phone_number(message: Message, state: FSMContext, phone: str):
         return
     
     # Формирование подтверждения
-    table_name = "Любой стол"
-    if data['table_id']:
-        table = TableRepository.get_table_by_id(data['table_id'])
-        table_name = table.name if table else "Неизвестный стол"
+    table = TableRepository.get_table_by_id(data['table_id'])
+    table_name = table.name if table else "Неизвестный стол"
     
     confirmation_text = (
         f"✅ Подтверждение бронирования:\n\n"
@@ -264,7 +262,7 @@ async def confirm_booking(callback: CallbackQuery, state: FSMContext):
     
     if not is_available:
         await callback.message.edit_text(
-            "⚠️ К сожалению, слот уже занят. Попробуйте забронировать другое время."
+            "⚠️ К сожалению, стол уже занят. Попробуйте забронировать другое время."
         )
         await callback.answer()
         await state.clear()
@@ -289,10 +287,8 @@ async def confirm_booking(callback: CallbackQuery, state: FSMContext):
     HoldRepository.delete_user_holds(callback.from_user.id)
     
     # Уведомление администраторов
-    table_name = "Любой стол"
-    if data['table_id']:
-        table = TableRepository.get_table_by_id(data['table_id'])
-        table_name = table.name if table else "Неизвестный стол"
+    table = TableRepository.get_table_by_id(data['table_id'])
+    table_name = table.name if table else "Неизвестный стол"
     
     admin_text = (
         f"📌 Новое бронирование #{booking_id}\n\n"
@@ -355,10 +351,8 @@ async def show_booking_details(callback: CallbackQuery):
         await callback.answer("Бронирование не найдено", show_alert=True)
         return
     
-    table_name = "Любой стол"
-    if booking.table_id:
-        table = TableRepository.get_table_by_id(booking.table_id)
-        table_name = table.name if table else "Неизвестный стол"
+    table = TableRepository.get_table_by_id(booking.table_id)
+    table_name = table.name if table else "Неизвестный стол"
     
     text = (
         f"📋 Бронирование #{booking.id}\n\n"
