@@ -20,7 +20,7 @@ class Booking:
     id: Optional[int]
     user_id: int
     username: Optional[str]
-    table_id: Optional[int]  # None = любой стол
+    table_id: int  # Теперь обязательный (всегда конкретный стол)
     start_time: datetime
     end_time: datetime
     phone: str
@@ -39,7 +39,7 @@ class Hold:
     """Модель временного удержания слота"""
     id: Optional[int]
     user_id: int
-    table_id: Optional[int]
+    table_id: int  # Теперь обязательный (всегда конкретный стол)
     start_time: datetime
     end_time: datetime
     created_at: datetime
