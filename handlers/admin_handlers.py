@@ -102,10 +102,8 @@ async def admin_show_booking_detail(callback: CallbackQuery):
         await callback.answer("❌ Бронирование не найдено", show_alert=True)
         return
     
-    table_name = "Любой стол"
-    if booking.table_id:
-        table = TableRepository.get_table_by_id(booking.table_id)
-        table_name = table.name if table else f"Стол #{booking.table_id}"
+    table = TableRepository.get_table_by_id(booking.table_id)
+    table_name = table.name if table else f"Стол #{booking.table_id}"
     
     status_emoji = "✅" if booking.status == "active" else "❌"
     status_text = "Активно" if booking.status == "active" else "Отменено"
@@ -153,10 +151,8 @@ async def admin_cancel_booking(callback: CallbackQuery):
     
     # Отмена брони
     if BookingRepository.cancel_booking(booking_id):
-        table_name = "Любой стол"
-        if booking.table_id:
-            table = TableRepository.get_table_by_id(booking.table_id)
-            table_name = table.name if table else f"Стол #{booking.table_id}"
+        table = TableRepository.get_table_by_id(booking.table_id)
+        table_name = table.name if table else f"Стол #{booking.table_id}"
         
         # Уведомление пользователя
         try:
@@ -279,10 +275,8 @@ async def show_today_bookings(message: Message):
     text = "📋 Бронирования на сегодня:\n\n"
     
     for booking in bookings:
-        table_name = "Любой стол"
-        if booking.table_id:
-            table = TableRepository.get_table_by_id(booking.table_id)
-            table_name = table.name if table else f"Стол #{booking.table_id}"
+        table = TableRepository.get_table_by_id(booking.table_id)
+        table_name = table.name if table else f"Стол #{booking.table_id}"
         
         text += (
             f"🔹 Бронь #{booking.id}\n"
@@ -301,10 +295,8 @@ async def show_today_bookings(message: Message):
         current_part = "📋 Бронирования на сегодня:\n\n"
         
         for booking in bookings:
-            table_name = "Любой стол"
-            if booking.table_id:
-                table = TableRepository.get_table_by_id(booking.table_id)
-                table_name = table.name if table else f"Стол #{booking.table_id}"
+            table = TableRepository.get_table_by_id(booking.table_id)
+            table_name = table.name if table else f"Стол #{booking.table_id}"
             
             booking_text = (
                 f"🔹 Бронь #{booking.id}\n"
@@ -365,10 +357,8 @@ async def cmd_cancel(message: Message):
     
     # Отмена брони
     if BookingRepository.cancel_booking(booking_id):
-        table_name = "Любой стол"
-        if booking.table_id:
-            table = TableRepository.get_table_by_id(booking.table_id)
-            table_name = table.name if table else f"Стол #{booking.table_id}"
+        table = TableRepository.get_table_by_id(booking.table_id)
+        table_name = table.name if table else f"Стол #{booking.table_id}"
         
         await message.answer(
             f"✅ Бронирование #{booking_id} успешно отменено\n\n"
