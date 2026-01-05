@@ -1,108 +1,46 @@
 """
-Модуль для работы с базой данных SQLite
+Модели данных для работы с БД
 """
-import sqlite3
-import os
-from contextlib import contextmanager
-from typing import Generator
-from config import settings
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
 
 
-def get_connection() -> sqlite3.Connection:
-    """Получение подключения к БД"""
-    conn = sqlite3.Connection(settings.DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+@dataclass
+class Table:
+    """Модель стола"""
+    id: int
+    name: str
+    is_active: bool = True
 
 
-@contextmanager
-def get_db() -> Generator[sqlite3.Connection, None, None]:
-    """Контекстный менеджер для работы с БД"""
-    conn = get_connection()
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-
-
-def init_db():
-    """Инициализация базы данных"""
-    # Создание директории для БД, если не существует
-    db_dir = os.path.dirname(settings.DB_PATH)
-    if db_dir and not os.path.exists(db_dir):
-        os.makedirs(db_dir)
+@dataclass
+class Booking:
+    """Модель бронирования"""
+    id: Optional[int]
+    user_id: int
+    username: Optional[str]
+    table_id: int  # Теперь обязательный (всегда конкретный стол)
+    start_time: datetime
+    end_time: datetime
+    phone: str
+    created_at: datetime
+    status: str = 'active'  # active, cancelled
     
-    with get_db() as conn:
-        cursor = conn.cursor()
-        
-        # Таблица столов
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tables (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                is_active INTEGER DEFAULT 1
-            )
-        """)
-        
-        # Таблица бронирований
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS bookings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                username TEXT,
-                table_id INTEGER,
-                start_time TIMESTAMP NOT NULL,
-                end_time TIMESTAMP NOT NULL,
-                phone TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                status TEXT DEFAULT 'active',
-                FOREIGN KEY (table_id) REFERENCES tables (id)
-            )
-        """)
-        
-        # Индексы для быстрого поиска
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_bookings_time 
-            ON bookings(start_time, end_time, status)
-        """)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_bookings_user 
-            ON bookings(user_id, status)
-        """)
-        
-        # Таблица временных удержаний
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS holds (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                table_id INTEGER,
-                start_time TIMESTAMP NOT NULL,
-                end_time TIMESTAMP NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP NOT NULL
-            )
-        """)
-        
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_holds_expires 
-            ON holds(expires_at)
-        """)
-        
-        # Проверка наличия столов
-        cursor.execute("SELECT COUNT(*) as count FROM tables")
-        if cursor.fetchone()['count'] == 0:
-            # Добавление столов по умолчанию
-            cursor.execute(
-                "INSERT INTO tables (name) VALUES (?)",
-                ("Леопардовый пул",)
-            )
-            cursor.execute(
-                "INSERT INTO tables (name) VALUES (?)",
-                ("Русский",)
-            )
-        
-        conn.commit()
+    @property
+    def duration_hours(self) -> int:
+        """Длительность брони в часах"""
+        delta = self.end_time - self.start_time
+        return int(delta.total_seconds() / 3600)
+
+
+@dataclass
+class Hold:
+    """Модель временного удержания слота"""
+    id: Optional[int]
+    user_id: int
+    table_id: int  # Теперь обязательный (всегда конкретный стол)
+    start_time: datetime
+    end_time: datetime
+    created_at: datetime
+    expires_at: datetime
