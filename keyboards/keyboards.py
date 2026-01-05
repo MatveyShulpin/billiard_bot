@@ -82,14 +82,12 @@ def get_tables_keyboard(tables: List[Table]) -> InlineKeyboardMarkup:
     """Клавиатура выбора стола"""
     builder = InlineKeyboardBuilder()
     
-    builder.button(text="🎱 Любой стол", callback_data="table:any")
-    
     for table in tables:
         builder.button(text=table.name, callback_data=f"table:{table.id}")
     
     builder.button(text="◀️ Назад", callback_data="back_to_duration")
     builder.button(text="❌ Отмена", callback_data="cancel")
-    builder.adjust(1, 2, 2)
+    builder.adjust(2, 2)
     
     return builder.as_markup()
 
