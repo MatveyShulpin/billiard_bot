@@ -96,10 +96,13 @@ def init_db():
         cursor.execute("SELECT COUNT(*) as count FROM tables")
         if cursor.fetchone()['count'] == 0:
             # Добавление столов по умолчанию
-            for i in range(1, settings.TABLES_COUNT + 1):
-                cursor.execute(
-                    "INSERT INTO tables (name) VALUES (?)",
-                    (f"Стол {i}",)
-                )
+            cursor.execute(
+                "INSERT INTO tables (name) VALUES (?)",
+                ("Леопардовый пул",)
+            )
+            cursor.execute(
+                "INSERT INTO tables (name) VALUES (?)",
+                ("Русский",)
+            )
         
         conn.commit()
