@@ -92,6 +92,51 @@ class BookingRepository:
             return cursor.rowcount > 0
     
     @staticmethod
+    def update_booking_duration(booking_id: int, new_duration_hours: int) -> bool:
+        """Обновление длительности бронирования"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Получаем текущее бронирование
+            cursor.execute("SELECT start_time FROM bookings WHERE id = ?", (booking_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            
+            start_time = datetime.fromisoformat(row['start_time'])
+            new_end_time = start_time + timedelta(hours=new_duration_hours)
+            
+            # Обновляем
+            cursor.execute("""
+                UPDATE bookings SET end_time = ? 
+                WHERE id = ? AND status = 'active'
+            """, (new_end_time, booking_id))
+            
+            return cursor.rowcount > 0
+    
+    @staticmethod
+    def create_blocked_booking(table_id: int, start_time: datetime, 
+                               end_time: datetime, admin_username: str) -> int:
+        """Создание блокировки слота администратором"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO bookings 
+                (user_id, username, table_id, start_time, end_time, phone, created_at, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                0,  # user_id = 0 для блокировок админа
+                f"ADMIN_BLOCK_{admin_username}",
+                table_id,
+                start_time,
+                end_time,
+                "Заблокировано администратором",
+                datetime.now(),
+                'active'
+            ))
+            return cursor.lastrowid
+    
+    @staticmethod
     def get_booking_by_id(booking_id: int) -> Optional[Booking]:
         """Получение бронирования по ID"""
         with get_db() as conn:
