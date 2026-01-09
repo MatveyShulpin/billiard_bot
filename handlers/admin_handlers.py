@@ -6,15 +6,22 @@ from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
 
 from config import settings
 from database.repository import BookingRepository, TableRepository
 from keyboards.keyboards import (
     get_admin_keyboard, get_main_menu_keyboard,
     get_admin_dates_keyboard, get_admin_bookings_keyboard,
-    get_admin_booking_detail_keyboard
+    get_admin_booking_detail_keyboard, get_admin_edit_duration_keyboard,
+    get_admin_block_dates_keyboard, get_admin_block_times_keyboard,
+    get_admin_block_duration_keyboard, get_admin_block_tables_keyboard
 )
-from utils.time_utils import format_datetime, format_date, get_available_dates
+from utils.time_utils import (
+    format_datetime, format_date, get_available_dates, 
+    get_available_times, is_valid_booking_time
+)
+from states.booking_states import AdminBlockStates
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -230,16 +237,349 @@ async def admin_back_to_dates(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == "admin_back_to_panel")
-async def admin_back_to_panel(callback: CallbackQuery):
+async def admin_back_to_panel(callback: CallbackQuery, state: FSMContext):
     """Вернуться в админ-панель"""
     if not is_admin(callback.from_user.id):
         await callback.answer("⚠️ У вас нет доступа", show_alert=True)
         return
     
+    await state.clear()  # Очищаем состояние
+    
     await callback.message.edit_text(
         "⚙️ Админ-панель\n\nВыберите действие:",
         reply_markup=get_admin_keyboard()
     )
+    await callback.answer()
+
+
+# === РЕДАКТИРОВАНИЕ ДЛИТЕЛЬНОСТИ ===
+
+@router.callback_query(F.data.startswith("admin_edit:"))
+async def admin_edit_booking(callback: CallbackQuery):
+    """Начало редактирования длительности брони"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    parts = callback.data.split(":")
+    booking_id = int(parts[1])
+    date_str = parts[2] if len(parts) > 2 else None
+    
+    booking = BookingRepository.get_booking_by_id(booking_id)
+    
+    if not booking or booking.status != 'active':
+        await callback.answer("❌ Бронирование не найдено или отменено", show_alert=True)
+        return
+    
+    await callback.message.edit_text(
+        f"✏️ Редактирование брони #{booking_id}\n\n"
+        f"📅 {format_datetime(booking.start_time)}\n"
+        f"⏱ Текущая длительность: {booking.duration_hours} ч\n\n"
+        f"Выберите новую длительность:",
+        reply_markup=get_admin_edit_duration_keyboard(booking_id, booking.duration_hours, date_str)
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_set_duration:"))
+async def admin_set_duration(callback: CallbackQuery):
+    """Установка новой длительности"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    parts = callback.data.split(":")
+    booking_id = int(parts[1])
+    new_duration = int(parts[2])
+    date_str = parts[3] if len(parts) > 3 else None
+    
+    booking = BookingRepository.get_booking_by_id(booking_id)
+    
+    if not booking:
+        await callback.answer("❌ Бронирование не найдено", show_alert=True)
+        return
+    
+    # Проверка, что новая длительность не выходит за часы работы
+    if not is_valid_booking_time(booking.start_time, new_duration):
+        await callback.answer(
+            "⚠️ Новая длительность выходит за часы работы клуба",
+            show_alert=True
+        )
+        return
+    
+    # Проверка конфликтов с другими бронированиями
+    new_end_time = booking.start_time + timedelta(hours=new_duration)
+    
+    # Проверяем конфликты (исключая текущую бронь)
+    with_conflict = False
+    all_bookings = BookingRepository.get_bookings_by_date(booking.start_time)
+    
+    for other_booking in all_bookings:
+        if (other_booking.id != booking_id and 
+            other_booking.status == 'active' and
+            other_booking.table_id == booking.table_id and
+            other_booking.start_time < new_end_time and 
+            other_booking.end_time > booking.start_time):
+            with_conflict = True
+            break
+    
+    if with_conflict:
+        await callback.answer(
+            "⚠️ Новая длительность конфликтует с другими бронированиями на этом столе",
+            show_alert=True
+        )
+        return
+    
+    # Обновляем длительность
+    if BookingRepository.update_booking_duration(booking_id, new_duration):
+        table = TableRepository.get_table_by_id(booking.table_id)
+        table_name = table.name if table else f"Стол #{booking.table_id}"
+        
+        # Уведомление пользователя
+        try:
+            await callback.bot.send_message(
+                booking.user_id,
+                f"ℹ️ Длительность вашего бронирования #{booking_id} была изменена администратором\n\n"
+                f"📅 {format_datetime(booking.start_time)}\n"
+                f"⏱ Старая длительность: {booking.duration_hours} ч\n"
+                f"⏱ Новая длительность: {new_duration} ч\n"
+                f"🎱 {table_name}"
+            )
+        except Exception as e:
+            logger.error(f"Не удалось уведомить пользователя {booking.user_id}: {e}")
+        
+        await callback.answer("✅ Длительность успешно изменена", show_alert=True)
+        
+        # Возвращаемся к деталям брони
+        updated_booking = BookingRepository.get_booking_by_id(booking_id)
+        
+        status_emoji = "✅"
+        status_text = "Активно"
+        
+        text = (
+            f"📋 Бронирование #{updated_booking.id}\n\n"
+            f"{status_emoji} Статус: {status_text}\n"
+            f"📅 Дата и время: {format_datetime(updated_booking.start_time)}\n"
+            f"⏱ Длительность: {updated_booking.duration_hours} ч\n"
+            f"🕐 Окончание: {format_datetime(updated_booking.end_time)}\n"
+            f"🎱 Стол: {table_name}\n"
+            f"👤 Пользователь: @{updated_booking.username or 'без username'}\n"
+            f"🆔 User ID: {updated_booking.user_id}\n"
+            f"📱 Телефон: {updated_booking.phone}\n"
+            f"📝 Создано: {format_datetime(updated_booking.created_at)}"
+        )
+        
+        await callback.message.edit_text(
+            text,
+            reply_markup=get_admin_booking_detail_keyboard(booking_id, 'active', date_str)
+        )
+    else:
+        await callback.answer("❌ Не удалось изменить длительность", show_alert=True)
+
+
+# === БЛОКИРОВКА БРОНЕЙ ===
+
+@router.callback_query(F.data == "admin_block_booking")
+async def admin_start_block(callback: CallbackQuery, state: FSMContext):
+    """Начало процесса блокировки"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    await state.clear()
+    dates = get_available_dates()
+    
+    await callback.message.edit_text(
+        "🔒 Блокировка времени для бронирования\n\n"
+        "Выберите дату:",
+        reply_markup=get_admin_block_dates_keyboard(dates)
+    )
+    await state.set_state(AdminBlockStates.choosing_date)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_block_date:"), AdminBlockStates.choosing_date)
+async def admin_block_process_date(callback: CallbackQuery, state: FSMContext):
+    """Обработка выбора даты для блокировки"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    date_str = callback.data.split(":")[1]
+    selected_date = datetime.strptime(date_str, "%Y-%m-%d")
+    
+    await state.update_data(selected_date=selected_date)
+    
+    times = get_available_times(selected_date)
+    
+    if not times:
+        await callback.answer("На эту дату нет доступных слотов", show_alert=True)
+        return
+    
+    await callback.message.edit_text(
+        "🕐 Выберите время начала блокировки:",
+        reply_markup=get_admin_block_times_keyboard(times)
+    )
+    await state.set_state(AdminBlockStates.choosing_time)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_block_time:"), AdminBlockStates.choosing_time)
+async def admin_block_process_time(callback: CallbackQuery, state: FSMContext):
+    """Обработка выбора времени для блокировки"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    time_str = callback.data.split(":")[1]
+    selected_time = datetime.strptime(time_str, "%Y-%m-%d-%H-%M")
+    
+    await state.update_data(selected_time=selected_time)
+    
+    await callback.message.edit_text(
+        "⏱ Выберите длительность блокировки:",
+        reply_markup=get_admin_block_duration_keyboard()
+    )
+    await state.set_state(AdminBlockStates.choosing_duration)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_block_duration:"), AdminBlockStates.choosing_duration)
+async def admin_block_process_duration(callback: CallbackQuery, state: FSMContext):
+    """Обработка выбора длительности блокировки"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    duration = int(callback.data.split(":")[1])
+    data = await state.get_data()
+    
+    start_time = data['selected_time']
+    end_time = start_time + timedelta(hours=duration)
+    
+    # Проверка, что блокировка не выходит за часы работы
+    if not is_valid_booking_time(start_time, duration):
+        await callback.answer(
+            "⚠️ Блокировка выходит за часы работы клуба",
+            show_alert=True
+        )
+        return
+    
+    await state.update_data(duration=duration, end_time=end_time)
+    
+    tables = TableRepository.get_all_tables()
+    
+    await callback.message.edit_text(
+        "🎱 Выберите стол для блокировки:",
+        reply_markup=get_admin_block_tables_keyboard(tables)
+    )
+    await state.set_state(AdminBlockStates.choosing_table)
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_block_table:"), AdminBlockStates.choosing_table)
+async def admin_block_process_table(callback: CallbackQuery, state: FSMContext):
+    """Обработка выбора стола и создание блокировки"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    table_id = int(callback.data.split(":")[1])
+    data = await state.get_data()
+    
+    start_time = data['selected_time']
+    end_time = data['end_time']
+    
+    # Проверка доступности
+    is_available = BookingRepository.check_availability(
+        table_id, start_time, end_time
+    )
+    
+    if not is_available:
+        await callback.answer(
+            "⚠️ Выбранное время уже занято на этом столе",
+            show_alert=True
+        )
+        return
+    
+    # Создание блокировки
+    booking_id = BookingRepository.create_blocked_booking(
+        table_id,
+        start_time,
+        end_time,
+        callback.from_user.username or str(callback.from_user.id)
+    )
+    
+    table = TableRepository.get_table_by_id(table_id)
+    table_name = table.name if table else f"Стол #{table_id}"
+    
+    await callback.message.edit_text(
+        f"✅ Время успешно заблокировано!\n\n"
+        f"📋 Блокировка #{booking_id}\n"
+        f"📅 {format_datetime(start_time)}\n"
+        f"⏱ Длительность: {data['duration']} ч\n"
+        f"🎱 Стол: {table_name}\n\n"
+        f"Это время недоступно для обычных бронирований."
+    )
+    
+    # Уведомление других админов
+    admin_text = (
+        f"🔒 Администратор @{callback.from_user.username or 'без username'} "
+        f"заблокировал время\n\n"
+        f"📋 Блокировка #{booking_id}\n"
+        f"📅 {format_datetime(start_time)}\n"
+        f"⏱ {data['duration']} ч\n"
+        f"🎱 {table_name}"
+    )
+    
+    for admin_id in settings.ADMIN_IDS:
+        if admin_id != callback.from_user.id:
+            try:
+                await callback.bot.send_message(admin_id, admin_text)
+            except Exception as e:
+                logger.error(f"Не удалось уведомить админа {admin_id}: {e}")
+    
+    await callback.message.answer(
+        "⚙️ Админ-панель",
+        reply_markup=get_admin_keyboard()
+    )
+    
+    await state.clear()
+    await callback.answer()
+
+
+# Навигация для блокировки
+
+@router.callback_query(F.data == "admin_block_back_to_time")
+async def admin_block_back_to_time(callback: CallbackQuery, state: FSMContext):
+    """Возврат к выбору времени"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    data = await state.get_data()
+    times = get_available_times(data['selected_date'])
+    
+    await callback.message.edit_text(
+        "🕐 Выберите время начала блокировки:",
+        reply_markup=get_admin_block_times_keyboard(times)
+    )
+    await state.set_state(AdminBlockStates.choosing_time)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "admin_block_back_to_duration")
+async def admin_block_back_to_duration(callback: CallbackQuery, state: FSMContext):
+    """Возврат к выбору длительности"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    await callback.message.edit_text(
+        "⏱ Выберите длительность блокировки:",
+        reply_markup=get_admin_block_duration_keyboard()
+    )
+    await state.set_state(AdminBlockStates.choosing_duration)
     await callback.answer()
 
 
