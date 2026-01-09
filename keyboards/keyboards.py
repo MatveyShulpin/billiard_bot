@@ -143,6 +143,7 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     
     builder.button(text="📋 Брони на сегодня", callback_data="admin_today")
     builder.button(text="📅 Просмотр броней по датам", callback_data="admin_bookings")
+    builder.button(text="🔒 Закрыть бронь", callback_data="admin_block_booking")
     builder.button(text="🏠 Главное меню", callback_data="main_menu")
     builder.adjust(1)
     
@@ -192,6 +193,12 @@ def get_admin_booking_detail_keyboard(booking_id: int, status: str, date_str: st
         if date_str:
             callback_data += f":{date_str}"
         builder.button(text="🗑 Отменить бронь", callback_data=callback_data)
+        
+        # Кнопка редактирования длительности
+        edit_callback = f"admin_edit:{booking_id}"
+        if date_str:
+            edit_callback += f":{date_str}"
+        builder.button(text="✏️ Изменить длительность", callback_data=edit_callback)
     
     if date_str:
         builder.button(text="◀️ Назад к списку", callback_data=f"admin_back_to_date:{date_str}")
@@ -199,6 +206,101 @@ def get_admin_booking_detail_keyboard(booking_id: int, status: str, date_str: st
         builder.button(text="◀️ Назад в админ-панель", callback_data="admin_back_to_panel")
     
     builder.adjust(1)
+    
+    return builder.as_markup()
+
+
+def get_admin_edit_duration_keyboard(booking_id: int, current_duration: int, date_str: str = None) -> InlineKeyboardMarkup:
+    """Клавиатура выбора новой длительности для редактирования"""
+    builder = InlineKeyboardBuilder()
+    
+    for hours in range(settings.MIN_BOOKING_HOURS, settings.MAX_BOOKING_HOURS + 1):
+        if hours == current_duration:
+            continue  # Пропускаем текущую длительность
+        
+        if hours == 1:
+            text = f"{hours} час"
+        elif hours in [2, 3, 4]:
+            text = f"{hours} часа"
+        else:
+            text = f"{hours} часов"
+        
+        callback_data = f"admin_set_duration:{booking_id}:{hours}"
+        if date_str:
+            callback_data += f":{date_str}"
+        builder.button(text=text, callback_data=callback_data)
+    
+    # Кнопка назад к деталям брони
+    back_callback = f"admin_booking:{booking_id}"
+    if date_str:
+        back_callback += f":{date_str}"
+    builder.button(text="◀️ Назад", callback_data=back_callback)
+    
+    builder.adjust(2)
+    
+    return builder.as_markup()
+
+
+def get_admin_block_dates_keyboard(dates: List[datetime]) -> InlineKeyboardMarkup:
+    """Клавиатура выбора даты для блокировки"""
+    builder = InlineKeyboardBuilder()
+    
+    for date in dates:
+        builder.button(
+            text=format_date(date),
+            callback_data=f"admin_block_date:{date.strftime('%Y-%m-%d')}"
+        )
+    
+    builder.button(text="◀️ Назад в админ-панель", callback_data="admin_back_to_panel")
+    builder.adjust(2)
+    
+    return builder.as_markup()
+
+
+def get_admin_block_times_keyboard(times: List[datetime]) -> InlineKeyboardMarkup:
+    """Клавиатура выбора времени для блокировки"""
+    builder = InlineKeyboardBuilder()
+    
+    for time in times:
+        builder.button(
+            text=format_time(time),
+            callback_data=f"admin_block_time:{time.strftime('%Y-%m-%d-%H-%M')}"
+        )
+    
+    builder.button(text="◀️ Назад", callback_data="admin_block_booking")
+    builder.adjust(3)
+    
+    return builder.as_markup()
+
+
+def get_admin_block_duration_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура выбора длительности блокировки"""
+    builder = InlineKeyboardBuilder()
+    
+    for hours in range(settings.MIN_BOOKING_HOURS, settings.MAX_BOOKING_HOURS + 1):
+        if hours == 1:
+            text = f"{hours} час"
+        elif hours in [2, 3, 4]:
+            text = f"{hours} часа"
+        else:
+            text = f"{hours} часов"
+        builder.button(text=text, callback_data=f"admin_block_duration:{hours}")
+    
+    builder.button(text="◀️ Назад", callback_data="admin_block_back_to_time")
+    builder.adjust(2)
+    
+    return builder.as_markup()
+
+
+def get_admin_block_tables_keyboard(tables: List[Table]) -> InlineKeyboardMarkup:
+    """Клавиатура выбора стола для блокировки"""
+    builder = InlineKeyboardBuilder()
+    
+    for table in tables:
+        builder.button(text=table.name, callback_data=f"admin_block_table:{table.id}")
+    
+    builder.button(text="◀️ Назад", callback_data="admin_block_back_to_duration")
+    builder.adjust(2)
     
     return builder.as_markup()
 
