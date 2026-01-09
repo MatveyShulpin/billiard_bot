@@ -12,3 +12,11 @@ class BookingStates(StatesGroup):
     choosing_table = State()
     entering_phone = State()
     confirming = State()
+
+
+class AdminBlockStates(StatesGroup):
+    """Состояния процесса блокировки администратором"""
+    choosing_date = State()
+    choosing_time = State()
+    choosing_duration = State()
+    choosing_table = State()
