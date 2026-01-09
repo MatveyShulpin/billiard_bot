@@ -102,7 +102,7 @@ def init_db():
             )
             cursor.execute(
                 "INSERT INTO tables (name) VALUES (?)",
-                ("Русский",)
+                ("Русский (Зеленый)",)
             )
         
         conn.commit()
