@@ -48,31 +48,49 @@ def get_available_times(date: datetime) -> List[datetime]:
     
     # Конец работы (может быть на следующий день)
     if close_time.hour < open_time.hour:
-        # Закрытие после полуночи
-        end = (date + timedelta(days=1)).replace(
+        # Закрытие после полуночи - слоты до полуночи + слоты после полуночи
+        # Генерируем слоты от времени открытия до полуночи
+        midnight = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Слоты от открытия до полуночи
+        while current < midnight:
+            if current > now:
+                times.append(current)
+            current += timedelta(minutes=settings.BOOKING_STEP_MINUTES)
+        
+        # Слоты после полуночи до закрытия
+        next_day_start = midnight
+        next_day_end = next_day_start.replace(
             hour=close_time.hour,
-            minute=close_time.minute,
-            second=0,
-            microsecond=0
+            minute=close_time.minute
         )
+        
+        # Резервируем минимум 1 час до закрытия
+        next_day_end_for_booking = next_day_end - timedelta(hours=settings.MIN_BOOKING_HOURS)
+        
+        current = next_day_start
+        while current <= next_day_end_for_booking:
+            if current > now:
+                times.append(current)
+            current += timedelta(minutes=settings.BOOKING_STEP_MINUTES)
     else:
+        # Закрытие в тот же день
         end = date.replace(
             hour=close_time.hour,
             minute=close_time.minute,
             second=0,
             microsecond=0
         )
-    
-    # Резервируем минимум 1 час до закрытия для возможности бронирования
-    # Вычитаем MIN_BOOKING_HOURS, чтобы нельзя было начать бронь слишком близко к закрытию
-    end_for_booking = end - timedelta(hours=settings.MIN_BOOKING_HOURS)
-    
-    # Генерация слотов
-    while current <= end_for_booking:
-        # Добавляем только будущие слоты
-        if current > now:
-            times.append(current)
-        current += timedelta(minutes=settings.BOOKING_STEP_MINUTES)
+        
+        # Резервируем минимум 1 час до закрытия для возможности бронирования
+        end_for_booking = end - timedelta(hours=settings.MIN_BOOKING_HOURS)
+        
+        # Генерация слотов
+        while current <= end_for_booking:
+            # Добавляем только будущие слоты
+            if current > now:
+                times.append(current)
+            current += timedelta(minutes=settings.BOOKING_STEP_MINUTES)
     
     return times
 
