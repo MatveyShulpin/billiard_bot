@@ -83,7 +83,7 @@ async def process_date(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("time:"), BookingStates.choosing_time)
 async def process_time(callback: CallbackQuery, state: FSMContext):
     """Обработка выбора времени"""
-    time_str = callback.data.split(":")[1]
+    time_str = callback.data.split(":", 1)[1]
     selected_time = datetime.strptime(time_str, "%Y-%m-%d-%H-%M")
     
     await state.update_data(selected_time=selected_time)
