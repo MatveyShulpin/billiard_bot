@@ -431,7 +431,7 @@ async def admin_block_process_time(callback: CallbackQuery, state: FSMContext):
         await callback.answer("⚠️ У вас нет доступа", show_alert=True)
         return
     
-    time_str = callback.data.split(":")[1]
+    time_str = callback.data.split(":", 1)[1]
     selected_time = datetime.strptime(time_str, "%Y-%m-%d-%H-%M")
     
     await state.update_data(selected_time=selected_time)
