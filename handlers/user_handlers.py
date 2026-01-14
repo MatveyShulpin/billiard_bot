@@ -68,6 +68,10 @@ async def process_date(callback: CallbackQuery, state: FSMContext):
     
     times = get_available_times(selected_date)
     
+    logger.info(f"Доступные слоты для {selected_date.date()}: {len(times)} шт.")
+    if times:
+        logger.info(f"Первый слот: {times[0]}, Последний слот: {times[-1]}")
+    
     if not times:
         await callback.answer("На эту дату нет доступных слотов", show_alert=True)
         return
@@ -105,6 +109,9 @@ async def process_duration(callback: CallbackQuery, state: FSMContext):
     start_time = data['selected_time']
     end_time = start_time + timedelta(hours=duration)
     
+    # Логирование для отладки
+    logger.info(f"Проверка бронирования: start={start_time}, end={end_time}, duration={duration}h")
+    
     # Проверка, что бронирование не выходит за часы работы
     if not is_valid_booking_time(start_time, duration):
         open_time, close_time = get_working_hours(start_time)
@@ -115,6 +122,8 @@ async def process_duration(callback: CallbackQuery, state: FSMContext):
             close_str = f"{close_time.hour:02d}:{close_time.minute:02d} (следующего дня)"
         else:
             close_str = f"{close_time.hour:02d}:{close_time.minute:02d}"
+        
+        logger.warning(f"Бронирование выходит за часы работы: {open_time.hour:02d}:{open_time.minute:02d} - {close_str}")
         
         await callback.answer(
             f"⚠️ Бронирование выходит за часы работы!\n"
