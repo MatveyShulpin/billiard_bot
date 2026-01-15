@@ -40,10 +40,13 @@ def get_available_dates() -> List[datetime]:
     """Получение списка доступных дат для бронирования"""
     dates = []
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    tournament_date = datetime(2025, 1, 25).date()  # Дата турнира
     
     for i in range(settings.MAX_BOOKING_DAYS):
         date = today + timedelta(days=i)
-        dates.append(date)
+        # Пропускаем дату турнира
+        if date.date() != tournament_date:
+            dates.append(date)
     
     return dates
 
