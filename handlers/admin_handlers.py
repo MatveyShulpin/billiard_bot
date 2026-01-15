@@ -9,7 +9,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
 from config import settings
-from database.repository import BookingRepository, TableRepository
+from database.repository import BookingRepository, TableRepository, TournamentRepository
 from keyboards.keyboards import (
     get_admin_keyboard, get_main_menu_keyboard,
     get_admin_dates_keyboard, get_admin_bookings_keyboard,
@@ -581,6 +581,152 @@ async def admin_block_back_to_duration(callback: CallbackQuery, state: FSMContex
     )
     await state.set_state(AdminBlockStates.choosing_duration)
     await callback.answer()
+
+
+@router.callback_query(F.data == "admin_tournament")
+async def admin_view_tournament(callback: CallbackQuery):
+    """Просмотр участников турнира"""
+    if not is_admin(callback.from_user.id):
+        await callback.answer("⚠️ У вас нет доступа", show_alert=True)
+        return
+    
+    registrations = TournamentRepository.get_all_registrations()
+    active_registrations = [r for r in registrations if r.status == 'active']
+    cancelled_registrations = [r for r in registrations if r.status == 'cancelled']
+    
+    if not registrations:
+        await callback.message.edit_text(
+            "🏆 Участники турнира 25.01\n\n"
+            "Пока нет регистраций",
+            reply_markup=get_admin_keyboard()
+        )
+        await callback.answer()
+        return
+    
+    text = f"🏆 Участники турнира 25.01\n\n"
+    text += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
+    text += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
+    
+    if active_registrations:
+        text += "📋 Активные регистрации:\n\n"
+        for i, reg in enumerate(active_registrations, 1):
+            text += (
+                f"{i}. {reg.full_name}\n"
+                f"   📱 {reg.phone}\n"
+                f"   💬 @{reg.username or 'без username'}\n"
+                f"   📋 ID: {reg.id}\n\n"
+            )
+    
+    # Разбиение длинных сообщений
+    if len(text) > 4000:
+        # Отправляем по частям
+        parts = []
+        current_part = f"🏆 Участники турнира 25.01\n\n"
+        current_part += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
+        current_part += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
+        current_part += "📋 Активные регистрации:\n\n"
+        
+        for i, reg in enumerate(active_registrations, 1):
+            reg_text = (
+                f"{i}. {reg.full_name}\n"
+                f"   📱 {reg.phone}\n"
+                f"   💬 @{reg.username or 'без username'}\n"
+                f"   📋 ID: {reg.id}\n\n"
+            )
+            
+            if len(current_part) + len(reg_text) > 4000:
+                parts.append(current_part)
+                current_part = reg_text
+            else:
+                current_part += reg_text
+        
+        if current_part:
+            parts.append(current_part)
+        
+        await callback.message.edit_text(parts[0])
+        for part in parts[1:]:
+            await callback.message.answer(part)
+    else:
+        await callback.message.edit_text(text)
+    
+    # Отправляем инструкцию по отмене
+    await callback.message.answer(
+        "💡 Для отмены регистрации используйте:\n"
+        "/cancel_tournament <ID>\n\n"
+        "Например: /cancel_tournament 5",
+        reply_markup=get_admin_keyboard()
+    )
+    
+    await callback.answer()
+
+
+@router.message(Command("cancel_tournament"))
+async def cmd_cancel_tournament(message: Message):
+    """Команда /cancel_tournament <id> - отмена регистрации на турнир"""
+    if not is_admin(message.from_user.id):
+        await message.answer("⚠️ У вас нет доступа к этой команде")
+        return
+    
+    parts = message.text.split()
+    if len(parts) < 2:
+        await message.answer(
+            "⚠️ Использование: /cancel_tournament <id>\n\n"
+            "Пример: /cancel_tournament 5"
+        )
+        return
+    
+    try:
+        registration_id = int(parts[1])
+    except ValueError:
+        await message.answer("⚠️ ID должен быть числом")
+        return
+    
+    registration = TournamentRepository.get_registration_by_id(registration_id)
+    
+    if not registration:
+        await message.answer(f"⚠️ Регистрация #{registration_id} не найдена")
+        return
+    
+    if registration.status != 'active':
+        await message.answer(f"⚠️ Регистрация #{registration_id} уже отменена")
+        return
+    
+    if TournamentRepository.cancel_registration(registration_id):
+        await message.answer(
+            f"✅ Регистрация #{registration_id} успешно отменена\n\n"
+            f"👤 {registration.full_name}\n"
+            f"📱 {registration.phone}\n"
+            f"💬 @{registration.username or 'без username'}"
+        )
+        
+        # Уведомление пользователя
+        try:
+            await message.bot.send_message(
+                registration.user_id,
+                f"❌ Ваша регистрация на турнир 25.01 была отменена администратором\n\n"
+                f"📋 Регистрация #{registration_id}\n"
+                f"👤 {registration.full_name}\n\n"
+                f"По вопросам обращайтесь к администрации."
+            )
+        except Exception as e:
+            logger.error(f"Не удалось уведомить пользователя {registration.user_id}: {e}")
+        
+        # Уведомление других администраторов
+        admin_text = (
+            f"ℹ️ Администратор @{message.from_user.username or 'без username'} "
+            f"отменил регистрацию на турнир #{registration_id}\n\n"
+            f"👤 {registration.full_name}\n"
+            f"💬 @{registration.username or 'без username'}"
+        )
+        
+        for admin_id in settings.ADMIN_IDS:
+            if admin_id != message.from_user.id:
+                try:
+                    await message.bot.send_message(admin_id, admin_text)
+                except Exception as e:
+                    logger.error(f"Не удалось уведомить админа {admin_id}: {e}")
+    else:
+        await message.answer(f"⚠️ Не удалось отменить регистрацию #{registration_id}")
 
 
 @router.message(Command("today"))
