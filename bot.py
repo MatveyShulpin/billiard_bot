@@ -10,7 +10,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import settings
 from database.database import init_db
-from handlers import user_handlers, admin_handlers
+from handlers import user_handlers, admin_handlers, tournament_handlers
 from middlewares.hold_cleanup import HoldCleanupMiddleware
 from utils.scheduler import start_scheduler
 
@@ -42,6 +42,7 @@ async def main():
     # Регистрация роутеров
     dp.include_router(user_handlers.router)
     dp.include_router(admin_handlers.router)
+    dp.include_router(tournament_handlers.router)
     
     # Запуск планировщика очистки holds
     scheduler = await start_scheduler()
