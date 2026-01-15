@@ -44,3 +44,15 @@ class Hold:
     end_time: datetime
     created_at: datetime
     expires_at: datetime
+
+
+@dataclass
+class TournamentRegistration:
+    """Модель регистрации на турнир"""
+    id: Optional[int]
+    user_id: int
+    username: Optional[str]
+    full_name: str
+    phone: str
+    created_at: datetime
+    status: str = 'active'  # active, cancelled
