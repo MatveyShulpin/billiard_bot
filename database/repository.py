@@ -271,3 +271,119 @@ class TableRepository:
                     is_active=bool(row['is_active'])
                 )
             return None
+
+
+class TournamentRepository:
+    """Репозиторий для работы с регистрациями на турнир"""
+    
+    TOURNAMENT_DATE = datetime(2025, 1, 25)  # Дата турнира
+    MAX_PARTICIPANTS = 32  # Максимум участников
+    
+    @staticmethod
+    def create_registration(registration: 'TournamentRegistration') -> int:
+        """Создание новой регистрации на турнир"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO tournament_registrations 
+                (user_id, username, full_name, phone, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                registration.user_id,
+                registration.username,
+                registration.full_name,
+                registration.phone,
+                registration.created_at
+            ))
+            return cursor.lastrowid
+    
+    @staticmethod
+    def get_active_registrations_count() -> int:
+        """Получение количества активных регистраций"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) as count FROM tournament_registrations 
+                WHERE status = 'active'
+            """)
+            return cursor.fetchone()['count']
+    
+    @staticmethod
+    def get_all_registrations() -> List['TournamentRegistration']:
+        """Получение всех регистраций"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tournament_registrations 
+                ORDER BY created_at
+            """)
+            rows = cursor.fetchall()
+            return [TournamentRepository._row_to_registration(row) for row in rows]
+    
+    @staticmethod
+    def get_active_registrations() -> List['TournamentRegistration']:
+        """Получение активных регистраций"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tournament_registrations 
+                WHERE status = 'active'
+                ORDER BY created_at
+            """)
+            rows = cursor.fetchall()
+            return [TournamentRepository._row_to_registration(row) for row in rows]
+    
+    @staticmethod
+    def get_user_registration(user_id: int) -> Optional['TournamentRegistration']:
+        """Получение регистрации пользователя"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tournament_registrations 
+                WHERE user_id = ? AND status = 'active'
+            """, (user_id,))
+            row = cursor.fetchone()
+            return TournamentRepository._row_to_registration(row) if row else None
+    
+    @staticmethod
+    def get_registration_by_id(registration_id: int) -> Optional['TournamentRegistration']:
+        """Получение регистрации по ID"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tournament_registrations 
+                WHERE id = ?
+            """, (registration_id,))
+            row = cursor.fetchone()
+            return TournamentRepository._row_to_registration(row) if row else None
+    
+    @staticmethod
+    def cancel_registration(registration_id: int) -> bool:
+        """Отмена регистрации"""
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE tournament_registrations SET status = 'cancelled' 
+                WHERE id = ? AND status = 'active'
+            """, (registration_id,))
+            return cursor.rowcount > 0
+    
+    @staticmethod
+    def is_slots_available() -> bool:
+        """Проверка наличия свободных мест"""
+        count = TournamentRepository.get_active_registrations_count()
+        return count < TournamentRepository.MAX_PARTICIPANTS
+    
+    @staticmethod
+    def _row_to_registration(row) -> 'TournamentRegistration':
+        """Преобразование строки БД в объект TournamentRegistration"""
+        from database.models import TournamentRegistration
+        return TournamentRegistration(
+            id=row['id'],
+            user_id=row['user_id'],
+            username=row['username'],
+            full_name=row['full_name'],
+            phone=row['phone'],
+            created_at=datetime.fromisoformat(row['created_at']),
+            status=row['status']
+        )
