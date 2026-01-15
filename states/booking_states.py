@@ -20,3 +20,10 @@ class AdminBlockStates(StatesGroup):
     choosing_time = State()
     choosing_duration = State()
     choosing_table = State()
+
+
+class TournamentStates(StatesGroup):
+    """Состояния регистрации на турнир"""
+    entering_name = State()
+    entering_phone = State()
+    confirming = State()
