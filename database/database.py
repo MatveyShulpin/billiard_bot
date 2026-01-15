@@ -92,6 +92,24 @@ def init_db():
             ON holds(expires_at)
         """)
         
+        # Таблица регистраций на турнир
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tournament_registrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                username TEXT,
+                full_name TEXT NOT NULL,
+                phone TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'active'
+            )
+        """)
+        
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tournament_status 
+            ON tournament_registrations(status)
+        """)
+        
         # Проверка наличия столов
         cursor.execute("SELECT COUNT(*) as count FROM tables")
         if cursor.fetchone()['count'] == 0:
