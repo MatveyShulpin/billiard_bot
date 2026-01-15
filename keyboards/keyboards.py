@@ -16,6 +16,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
     """Главное меню"""
     buttons = [
         [KeyboardButton(text="📅 Забронировать стол")],
+        [KeyboardButton(text="🏆 Записаться на турнир 25.01")],
         [KeyboardButton(text="📋 Мои бронирования")],
     ]
     
@@ -144,6 +145,7 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="📋 Брони на сегодня", callback_data="admin_today")
     builder.button(text="📅 Просмотр броней по датам", callback_data="admin_bookings")
     builder.button(text="🔒 Закрыть бронь", callback_data="admin_block_booking")
+    builder.button(text="🏆 Участники турнира", callback_data="admin_tournament")
     builder.button(text="🏠 Главное меню", callback_data="main_menu")
     builder.adjust(1)
     
@@ -301,6 +303,28 @@ def get_admin_block_tables_keyboard(tables: List[Table]) -> InlineKeyboardMarkup
     
     builder.button(text="◀️ Назад", callback_data="admin_block_back_to_duration")
     builder.adjust(2)
+    
+    return builder.as_markup()
+
+
+def get_tournament_confirmation_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура подтверждения записи на турнир"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.button(text="✅ Подтвердить запись", callback_data="tournament_confirm")
+    builder.button(text="❌ Отмена", callback_data="tournament_cancel")
+    builder.adjust(1)
+    
+    return builder.as_markup()
+
+
+def get_tournament_registered_keyboard() -> InlineKeyboardMarkup:
+    """Клавиатура для зарегистрированного участника"""
+    builder = InlineKeyboardBuilder()
+    
+    builder.button(text="🗑 Отменить регистрацию", callback_data="tournament_user_cancel")
+    builder.button(text="🏠 Главное меню", callback_data="main_menu")
+    builder.adjust(1)
     
     return builder.as_markup()
 
