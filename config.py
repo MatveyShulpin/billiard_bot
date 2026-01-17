@@ -18,7 +18,7 @@ class Settings:
     DB_PATH: str = os.getenv('DB_PATH', 'data/billiard_bot.db')
     
     # Бизнес-правила
-    TABLES_COUNT: int = 2
+    TABLES_COUNT: int = 3
     BOOKING_STEP_MINUTES: int = 60
     MAX_BOOKING_DAYS: int = 7
     MIN_BOOKING_HOURS: int = 1
