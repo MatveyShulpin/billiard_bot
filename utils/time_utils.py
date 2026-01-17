@@ -10,9 +10,20 @@ def get_working_hours(date: datetime) -> Tuple[time, time]:
     """
     Получение часов работы для конкретной даты
     Возвращает (время открытия, время закрытия)
+    
+    ВАЖНО: Если время после полуночи (00:00-06:00), это продолжение предыдущего дня!
+    Проверяем день недели ПО ДНЮ ОТКРЫТИЯ, а не по календарной дате.
     """
-    # Пятница (4) и Суббота (5)
-    if date.weekday() in [4, 5]:
+    check_date = date
+    
+    # Если это слот после полуночи (00:00-06:00), 
+    # то это продолжение ПРЕДЫДУЩЕГО рабочего дня
+    if date.hour < 6:
+        check_date = date - timedelta(days=1)
+    
+    # Теперь проверяем день недели для определения режима
+    # 4 = Пятница, 5 = Суббота
+    if check_date.weekday() in [4, 5]:
         return settings.WEEKEND_OPEN, settings.WEEKEND_CLOSE
     else:
         return settings.WEEKDAY_OPEN, settings.WEEKDAY_CLOSE
@@ -55,6 +66,7 @@ def get_available_times(date: datetime) -> List[datetime]:
     """
     Получение списка доступных временных слотов для даты
     """
+    # Определяем режим работы по дню открытия
     open_time, close_time = get_working_hours(date)
     times = []
     now = datetime.now()
