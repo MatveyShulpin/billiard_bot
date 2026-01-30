@@ -16,7 +16,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
     """Главное меню"""
     buttons = [
         [KeyboardButton(text="📅 Забронировать стол")],
-        [KeyboardButton(text="🏆 Записаться на турнир 25.01")],
+        #[KeyboardButton(text="🏆 Записаться на турнир 25.01")],
         [KeyboardButton(text="📋 Мои бронирования")],
     ]
     
@@ -145,7 +145,7 @@ def get_admin_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="📋 Брони на сегодня", callback_data="admin_today")
     builder.button(text="📅 Просмотр броней по датам", callback_data="admin_bookings")
     builder.button(text="🔒 Закрыть бронь", callback_data="admin_block_booking")
-    builder.button(text="🏆 Участники турнира", callback_data="admin_tournament")
+    #builder.button(text="🏆 Участники турнира", callback_data="admin_tournament")
     builder.button(text="🏠 Главное меню", callback_data="main_menu")
     builder.adjust(1)
     
