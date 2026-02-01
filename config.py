@@ -28,7 +28,7 @@ class Settings:
     # Режим работы (часы)
     WEEKDAY_OPEN: time = time(16, 0)  # Пн-Чт, Вс
     WEEKDAY_CLOSE: time = time(2, 0)  # следующего дня
-    WEEKEND_OPEN: time = time(16, 0)  # Пт-Сб
+    WEEKEND_OPEN: time = time(15, 0)  # Пт-Сб
     WEEKEND_CLOSE: time = time(4, 0)  # следующего дня
     
     def __post_init__(self):
@@ -51,3 +51,4 @@ class Settings:
 
 # Глобальный экземпляр настроек
 settings = Settings()
+
