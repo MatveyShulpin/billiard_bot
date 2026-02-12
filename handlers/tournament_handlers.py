@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-@router.message(F.text == "🏆 Записаться на турнир 25.01")
+@router.message(F.text == "🏆 Записаться на турнир 23.02")
 async def start_tournament_registration(message: Message, state: FSMContext):
     """Начало регистрации на турнир"""
     await state.clear()
@@ -35,7 +35,7 @@ async def start_tournament_registration(message: Message, state: FSMContext):
             f"👤 Имя: {existing.full_name}\n"
             f"📱 Телефон: {existing.phone}\n"
             f"📝 Регистрация #{existing.id}\n\n"
-            f"📅 Дата турнира: 25 января 2025\n\n"
+            f"📅 Дата турнира: 23 февраля 2026\n\n"
             f"Если хотите отменить регистрацию, нажмите кнопку ниже:",
             reply_markup=get_tournament_registered_keyboard()
         )
@@ -57,7 +57,7 @@ async def start_tournament_registration(message: Message, state: FSMContext):
     
     await message.answer(
         f"🏆 Регистрация на турнир\n\n"
-        f"📅 Дата: 25 января 2025\n"
+        f"📅 Дата: 23 февраля 2026\n"
         f"👥 Свободных мест: {remaining}/{TournamentRepository.MAX_PARTICIPANTS}\n\n"
         f"Для регистрации введите ваше полное имя:",
         reply_markup=get_cancel_keyboard()
@@ -121,7 +121,7 @@ async def process_tournament_phone(message: Message, state: FSMContext, phone: s
     
     confirmation_text = (
         f"✅ Подтверждение регистрации на турнир\n\n"
-        f"🏆 Турнир: 25 января 2025\n"
+        f"🏆 Турнир: 23 февраля 2026\n"
         f"👤 Имя: {data['full_name']}\n"
         f"📱 Телефон: {phone}\n\n"
         f"📊 Вы будете участником #{active_count + 1}\n\n"
@@ -179,7 +179,7 @@ async def confirm_tournament_registration(callback: CallbackQuery, state: FSMCon
     
     await callback.message.edit_text(
         f"✅ Регистрация успешно завершена!\n\n"
-        f"🏆 Турнир: 25 января 2025\n"
+        f"🏆 Турнир: 23 февраля 2026\n"
         f"📋 Номер регистрации: #{registration_id}\n"
         f"👤 Имя: {data['full_name']}\n"
         f"📱 Телефон: {data['phone']}\n\n"
