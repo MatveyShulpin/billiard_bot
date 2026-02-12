@@ -596,14 +596,14 @@ async def admin_view_tournament(callback: CallbackQuery):
     
     if not registrations:
         await callback.message.edit_text(
-            "🏆 Участники турнира 25.01\n\n"
+            "🏆 Участники турнира 23.02\n\n"
             "Пока нет регистраций",
             reply_markup=get_admin_keyboard()
         )
         await callback.answer()
         return
     
-    text = f"🏆 Участники турнира 25.01\n\n"
+    text = f"🏆 Участники турнира 23.02\n\n"
     text += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
     text += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
     
@@ -621,7 +621,7 @@ async def admin_view_tournament(callback: CallbackQuery):
     if len(text) > 4000:
         # Отправляем по частям
         parts = []
-        current_part = f"🏆 Участники турнира 25.01\n\n"
+        current_part = f"🏆 Участники турнира 23.02\n\n"
         current_part += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
         current_part += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
         current_part += "📋 Активные регистрации:\n\n"
@@ -703,7 +703,7 @@ async def cmd_cancel_tournament(message: Message):
         try:
             await message.bot.send_message(
                 registration.user_id,
-                f"❌ Ваша регистрация на турнир 25.01 была отменена администратором\n\n"
+                f"❌ Ваша регистрация на турнир 23.02 была отменена администратором\n\n"
                 f"📋 Регистрация #{registration_id}\n"
                 f"👤 {registration.full_name}\n\n"
                 f"По вопросам обращайтесь к администрации."
