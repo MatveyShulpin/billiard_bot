@@ -276,8 +276,8 @@ class TableRepository:
 class TournamentRepository:
     """Репозиторий для работы с регистрациями на турнир"""
     
-    TOURNAMENT_DATE = datetime(2025, 1, 25)  # Дата турнира
-    MAX_PARTICIPANTS = 32  # Максимум участников
+    TOURNAMENT_DATE = datetime(2026, 2, 23)  # Дата турнира
+    MAX_PARTICIPANTS = 16  # Максимум участников
     
     @staticmethod
     def create_registration(registration: 'TournamentRegistration') -> int:
@@ -387,3 +387,4 @@ class TournamentRepository:
             created_at=datetime.fromisoformat(row['created_at']),
             status=row['status']
         )
+
