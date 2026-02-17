@@ -531,14 +531,15 @@ async def support_send_message(message: Message, state: FSMContext):
         f"💬 {message.text}"
     )
 
-    for admin_id in settings.ADMIN_IDS:
+    if settings.SUPPORT_ADMIN_ID:
         try:
-            await message.bot.send_message(admin_id, admin_text)
+            await message.bot.send_message(settings.SUPPORT_ADMIN_ID, admin_text)
         except Exception as e:
-            logger.error(f"Не удалось отправить сообщение поддержки админу {admin_id}: {e}")
+            logger.error(f"Не удалось отправить сообщение поддержки: {e}")
 
     await message.answer(
-        "✅ Ваше сообщение отправлено. Мы скоро свяжемся с вами.",
+        "✅ Ваше сообщение отправлено. Спасибо, что помогаете нам становиться лучше!",
         reply_markup=get_main_menu_keyboard(settings.is_admin(user.id))
     )
+
 
