@@ -12,6 +12,7 @@ from config import settings
 from database.database import init_db
 from handlers import user_handlers, admin_handlers, tournament_handlers
 from middlewares.hold_cleanup import HoldCleanupMiddleware
+from middlewares.keyboard_refresh import KeyboardRefreshMiddleware
 from utils.scheduler import start_scheduler
 
 # Настройка логирования
@@ -38,6 +39,9 @@ async def main():
     # Подключение middleware для очистки holds
     dp.message.middleware(HoldCleanupMiddleware())
     dp.callback_query.middleware(HoldCleanupMiddleware())
+
+    # Подключение middleware для обновления клавиатуры после рестарта
+    dp.message.middleware(KeyboardRefreshMiddleware())
     
     # Регистрация роутеров
     dp.include_router(user_handlers.router)
