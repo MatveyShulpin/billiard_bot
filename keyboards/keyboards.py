@@ -18,6 +18,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
         [KeyboardButton(text="📅 Забронировать стол")],
         [KeyboardButton(text="🏆 Записаться на турнир 23.02")],
         [KeyboardButton(text="📋 Мои бронирования")],
+        [KeyboardButton(text="🆘 Поддержка")],
     ]
     
     if is_admin:
