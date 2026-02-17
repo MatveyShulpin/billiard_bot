@@ -13,6 +13,7 @@ class Settings:
     # Telegram
     BOT_TOKEN: str = os.getenv('BOT_TOKEN', '')
     ADMIN_IDS: List[int] = None
+    SUPPORT_ADMIN_ID: int = int(os.getenv('SUPPORT_ADMIN_ID', 0))
     
     # База данных
     DB_PATH: str = os.getenv('DB_PATH', 'data/billiard_bot.db')
@@ -51,4 +52,5 @@ class Settings:
 
 # Глобальный экземпляр настроек
 settings = Settings()
+
 
