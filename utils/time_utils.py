@@ -16,19 +16,22 @@ def get_working_hours(date: datetime) -> Tuple[time, time]:
     Сб:    15:00 - 04:00
     Вс:    15:00 - 02:00
 
-    ВАЖНО: Если время после полуночи (00:00-06:00), это продолжение предыдущего дня.
-    Проверяем день недели ПО ДНЮ ОТКРЫТИЯ, а не по календарной дате.
+    ВАЖНО: Если время после полуночи (00:00-06:00) и это реальный ночной слот
+    (не начало дня), это продолжение предыдущего рабочего дня.
     """
     check_date = date
 
-    # Если это слот после полуночи (00:00-06:00),
-    # то это продолжение ПРЕДЫДУЩЕГО рабочего дня
-    if date.hour < 6:
+    # Сдвигаем только если это реальный ночной слот (не полночь начала дня).
+    # Полночь начала дня: hour=0, minute=0, second=0 — это просто выбранная дата,
+    # а не ночной слот после работы.
+    is_start_of_day = (date.hour == 0 and date.minute == 0 and date.second == 0)
+
+    if date.hour < 6 and not is_start_of_day:
         check_date = date - timedelta(days=1)
 
     weekday = check_date.weekday()  # 0=Пн, 4=Пт, 5=Сб, 6=Вс
 
-    if weekday == 4:   # Пятница
+    if weekday == 4:    # Пятница
         return settings.FRIDAY_OPEN, settings.FRIDAY_CLOSE
     elif weekday == 5:  # Суббота
         return settings.WEEKEND_OPEN, settings.WEEKEND_CLOSE
