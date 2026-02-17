@@ -12,11 +12,12 @@ from aiogram.fsm.context import FSMContext
 from config import settings
 from database.repository import BookingRepository, HoldRepository, TableRepository
 from database.models import Booking, Hold
-from states.booking_states import BookingStates
+from states.booking_states import BookingStates, SupportStates
 from keyboards.keyboards import (
     get_main_menu_keyboard, get_dates_keyboard, get_times_keyboard,
     get_duration_keyboard, get_tables_keyboard, get_phone_keyboard,
-    get_confirmation_keyboard, get_bookings_keyboard, get_booking_actions_keyboard
+    get_confirmation_keyboard, get_bookings_keyboard, get_booking_actions_keyboard,
+    get_cancel_keyboard
 )
 from utils.time_utils import (
     get_available_dates, get_available_times, is_valid_booking_time,
@@ -500,3 +501,43 @@ async def cancel_booking_process(callback: CallbackQuery, state: FSMContext):
         reply_markup=get_main_menu_keyboard(settings.is_admin(callback.from_user.id))
     )
     await callback.answer()
+
+
+@router.message(F.text == "🆘 Поддержка")
+async def support_start(message: Message, state: FSMContext):
+    """Начало обращения в поддержку"""
+    await state.clear()
+    await message.answer(
+        "🆘 Поддержка\n\n"
+        "Опишите вашу проблему, и мы свяжемся с вами.",
+        reply_markup=get_cancel_keyboard()
+    )
+    await state.set_state(SupportStates.waiting_for_message)
+
+
+@router.message(SupportStates.waiting_for_message, F.text)
+async def support_send_message(message: Message, state: FSMContext):
+    """Отправка сообщения поддержки администратору"""
+    await state.clear()
+
+    user = message.from_user
+    username = f"@{user.username}" if user.username else "без username"
+    full_name = user.full_name or "Без имени"
+
+    admin_text = (
+        f"🆘 Обращение в поддержку\n\n"
+        f"👤 {full_name} ({username})\n"
+        f"🆔 ID: {user.id}\n\n"
+        f"💬 {message.text}"
+    )
+
+    for admin_id in settings.ADMIN_IDS:
+        try:
+            await message.bot.send_message(admin_id, admin_text)
+        except Exception as e:
+            logger.error(f"Не удалось отправить сообщение поддержки админу {admin_id}: {e}")
+
+    await message.answer(
+        "✅ Ваше сообщение отправлено. Мы скоро свяжемся с вами.",
+        reply_markup=get_main_menu_keyboard(settings.is_admin(user.id))
+    )
