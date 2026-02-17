@@ -27,10 +27,14 @@ class Settings:
     HOLD_TIMEOUT_MINUTES: int = 10
     
     # Режим работы (часы)
-    WEEKDAY_OPEN: time = time(16, 0)  # Пн-Чт, Вс
-    WEEKDAY_CLOSE: time = time(2, 0)  # следующего дня
-    WEEKEND_OPEN: time = time(15, 0)  # Пт-Сб
-    WEEKEND_CLOSE: time = time(4, 0)  # следующего дня
+    WEEKDAY_OPEN: time = time(16, 0)   # Пн-Чт
+    WEEKDAY_CLOSE: time = time(2, 0)   # следующего дня
+    FRIDAY_OPEN: time = time(16, 0)    # Пт
+    FRIDAY_CLOSE: time = time(4, 0)    # следующего дня
+    WEEKEND_OPEN: time = time(15, 0)   # Сб
+    WEEKEND_CLOSE: time = time(4, 0)   # следующего дня
+    SUNDAY_OPEN: time = time(15, 0)    # Вс
+    SUNDAY_CLOSE: time = time(2, 0)    # следующего дня
     
     def __post_init__(self):
         """Инициализация после создания объекта"""
@@ -52,5 +56,3 @@ class Settings:
 
 # Глобальный экземпляр настроек
 settings = Settings()
-
-
