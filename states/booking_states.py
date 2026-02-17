@@ -27,3 +27,8 @@ class TournamentStates(StatesGroup):
     entering_name = State()
     entering_phone = State()
     confirming = State()
+
+
+class SupportStates(StatesGroup):
+    """Состояния обращения в поддержку"""
+    waiting_for_message = State()
