@@ -509,7 +509,7 @@ async def support_start(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         "🆘 Поддержка\n\n"
-        "Опишите вашу проблему, и мы свяжемся с вами.",
+        "Опишите вашу проблему, и мы решим ее как можно скорее.",
         reply_markup=get_cancel_keyboard()
     )
     await state.set_state(SupportStates.waiting_for_message)
@@ -541,3 +541,4 @@ async def support_send_message(message: Message, state: FSMContext):
         "✅ Ваше сообщение отправлено. Мы скоро свяжемся с вами.",
         reply_markup=get_main_menu_keyboard(settings.is_admin(user.id))
     )
+
