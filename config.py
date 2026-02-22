@@ -13,7 +13,7 @@ class Settings:
     # Telegram
     BOT_TOKEN: str = os.getenv('BOT_TOKEN', '')
     ADMIN_IDS: List[int] = None
-    SUPPORT_ADMIN_ID: int = int(os.getenv('SUPPORT_ADMIN_ID', 0))
+    SUPPORT_ADMIN_IDS: List[int] = None
     
     # База данных
     DB_PATH: str = os.getenv('DB_PATH', 'data/billiard_bot.db')
@@ -48,6 +48,14 @@ class Settings:
                 self.ADMIN_IDS = [int(id.strip()) for id in admin_ids_str.split(',')]
             else:
                 self.ADMIN_IDS = []
+        
+        # Парсинг SUPPORT_ADMIN_IDS из переменной окружения
+        if self.SUPPORT_ADMIN_IDS is None:
+            support_admin_ids_str = os.getenv('SUPPORT_ADMIN_IDS', '')
+            if support_admin_ids_str:
+                self.SUPPORT_ADMIN_IDS = [int(id.strip()) for id in support_admin_ids_str.split(',')]
+            else:
+                self.SUPPORT_ADMIN_IDS = []
     
     def is_admin(self, user_id: int) -> bool:
         """Проверка, является ли пользователь администратором"""
