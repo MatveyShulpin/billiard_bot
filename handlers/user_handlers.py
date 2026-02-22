@@ -509,7 +509,7 @@ async def support_start(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
         "🆘 Поддержка\n\n"
-        "Опишите вашу проблему, и мы решим ее как можно скорее.",
+        "Опишите вашу проблему, и мы свяжемся с вами.",
         reply_markup=get_cancel_keyboard()
     )
     await state.set_state(SupportStates.waiting_for_message)
@@ -531,15 +531,14 @@ async def support_send_message(message: Message, state: FSMContext):
         f"💬 {message.text}"
     )
 
-    if settings.SUPPORT_ADMIN_ID:
-        try:
-            await message.bot.send_message(settings.SUPPORT_ADMIN_ID, admin_text)
-        except Exception as e:
-            logger.error(f"Не удалось отправить сообщение поддержки: {e}")
+    if settings.SUPPORT_ADMIN_IDS:
+        for admin_id in settings.SUPPORT_ADMIN_IDS:
+            try:
+                await message.bot.send_message(admin_id, admin_text)
+            except Exception as e:
+                logger.error(f"Не удалось отправить сообщение поддержки админу {admin_id}: {e}")
 
     await message.answer(
-        "✅ Ваше сообщение отправлено. Спасибо, что помогаете нам становиться лучше!",
+        "✅ Ваше сообщение отправлено. Мы скоро свяжемся с вами.",
         reply_markup=get_main_menu_keyboard(settings.is_admin(user.id))
     )
-
-
