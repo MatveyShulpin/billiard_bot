@@ -16,7 +16,7 @@ def get_main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
     """Главное меню"""
     buttons = [
         [KeyboardButton(text="📅 Забронировать стол")],
-        [KeyboardButton(text="🏆 Записаться на турнир 23.02")],
+        #[KeyboardButton(text="🏆 Записаться на турнир 23.02")],
         [KeyboardButton(text="📋 Мои бронирования")],
         [KeyboardButton(text="🆘 Поддержка")],
     ]
