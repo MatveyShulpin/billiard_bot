@@ -590,55 +590,59 @@ async def admin_view_tournament(callback: CallbackQuery):
         await callback.answer("⚠️ У вас нет доступа", show_alert=True)
         return
     
-    registrations = TournamentRepository.get_all_registrations()
-    active_registrations = [r for r in registrations if r.status == 'active']
-    cancelled_registrations = [r for r in registrations if r.status == 'cancelled']
+    sections = []
+    has_registrations = False
     
-    if not registrations:
+    for tournament_type, tournament_name in TournamentRepository.TOURNAMENT_TYPES.items():
+        registrations = TournamentRepository.get_all_registrations(tournament_type)
+        active_registrations = [r for r in registrations if r.status == 'active']
+        cancelled_registrations = [r for r in registrations if r.status == 'cancelled']
+        
+        if registrations:
+            has_registrations = True
+        
+        section = f"🏆 {tournament_name}\n"
+        section += f"📅 {TournamentRepository.TOURNAMENT_DATE_TEXT}\n"
+        section += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
+        section += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
+        
+        if active_registrations:
+            section += "📋 Активные регистрации:\n\n"
+            for i, reg in enumerate(active_registrations, 1):
+                section += (
+                    f"{i}. {reg.full_name}\n"
+                    f"   📱 {reg.phone}\n"
+                    f"   💬 @{reg.username or 'без username'}\n"
+                    f"   📋 ID: {reg.id}\n\n"
+                )
+        else:
+            section += "Пока нет активных регистраций\n\n"
+        
+        sections.append(section)
+    
+    if not has_registrations:
         await callback.message.edit_text(
-            "🏆 Участники турнира 23.02\n\n"
+            f"🏆 Участники турниров\n"
+            f"📅 {TournamentRepository.TOURNAMENT_DATE_TEXT}\n\n"
             "Пока нет регистраций",
             reply_markup=get_admin_keyboard()
         )
         await callback.answer()
         return
     
-    text = f"🏆 Участники турнира 23.02\n\n"
-    text += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
-    text += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
-    
-    if active_registrations:
-        text += "📋 Активные регистрации:\n\n"
-        for i, reg in enumerate(active_registrations, 1):
-            text += (
-                f"{i}. {reg.full_name}\n"
-                f"   📱 {reg.phone}\n"
-                f"   💬 @{reg.username or 'без username'}\n"
-                f"   📋 ID: {reg.id}\n\n"
-            )
+    text = "🏆 Участники турниров\n\n" + "\n".join(sections)
     
     # Разбиение длинных сообщений
     if len(text) > 4000:
-        # Отправляем по частям
         parts = []
-        current_part = f"🏆 Участники турнира 23.02\n\n"
-        current_part += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
-        current_part += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
-        current_part += "📋 Активные регистрации:\n\n"
+        current_part = "🏆 Участники турниров\n\n"
         
-        for i, reg in enumerate(active_registrations, 1):
-            reg_text = (
-                f"{i}. {reg.full_name}\n"
-                f"   📱 {reg.phone}\n"
-                f"   💬 @{reg.username or 'без username'}\n"
-                f"   📋 ID: {reg.id}\n\n"
-            )
-            
-            if len(current_part) + len(reg_text) > 4000:
+        for section in sections:
+            if len(current_part) + len(section) > 4000:
                 parts.append(current_part)
-                current_part = reg_text
+                current_part = section
             else:
-                current_part += reg_text
+                current_part += section + "\n"
         
         if current_part:
             parts.append(current_part)
@@ -649,7 +653,6 @@ async def admin_view_tournament(callback: CallbackQuery):
     else:
         await callback.message.edit_text(text)
     
-    # Отправляем инструкцию по отмене
     await callback.message.answer(
         "💡 Для отмены регистрации используйте:\n"
         "/cancel_tournament <ID>\n\n"
@@ -690,10 +693,14 @@ async def cmd_cancel_tournament(message: Message):
     if registration.status != 'active':
         await message.answer(f"⚠️ Регистрация #{registration_id} уже отменена")
         return
+
+    tournament_name = TournamentRepository.get_tournament_name(registration.tournament_type)
     
     if TournamentRepository.cancel_registration(registration_id):
         await message.answer(
             f"✅ Регистрация #{registration_id} успешно отменена\n\n"
+            f"🏆 {tournament_name}\n"
+            f"📅 {TournamentRepository.TOURNAMENT_DATE_TEXT}\n"
             f"👤 {registration.full_name}\n"
             f"📱 {registration.phone}\n"
             f"💬 @{registration.username or 'без username'}"
@@ -703,7 +710,8 @@ async def cmd_cancel_tournament(message: Message):
         try:
             await message.bot.send_message(
                 registration.user_id,
-                f"❌ Ваша регистрация на турнир 23.02 была отменена администратором\n\n"
+                f"❌ Ваша регистрация на {tournament_name} была отменена администратором\n\n"
+                f"📅 {TournamentRepository.TOURNAMENT_DATE_TEXT}\n"
                 f"📋 Регистрация #{registration_id}\n"
                 f"👤 {registration.full_name}\n\n"
                 f"По вопросам обращайтесь к администрации."
@@ -715,6 +723,7 @@ async def cmd_cancel_tournament(message: Message):
         admin_text = (
             f"ℹ️ Администратор @{message.from_user.username or 'без username'} "
             f"отменил регистрацию на турнир #{registration_id}\n\n"
+            f"🏆 {tournament_name}\n"
             f"👤 {registration.full_name}\n"
             f"💬 @{registration.username or 'без username'}"
         )
