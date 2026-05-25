@@ -22,10 +22,10 @@ from states.booking_states import TournamentStates
 logger = logging.getLogger(__name__)
 router = Router()
 
-TOURNAMENT_MENU_BUTTON = "Турнир 07.06"
+TOURNAMENT_MENU_BUTTONS = {"🏆 Турнир 07.06", "Турнир 07.06"}
 
 
-@router.message(F.text == TOURNAMENT_MENU_BUTTON)
+@router.message(F.text.in_(TOURNAMENT_MENU_BUTTONS))
 async def show_tournament_selection(message: Message, state: FSMContext):
     """Выбор турнира для регистрации"""
     await state.clear()
