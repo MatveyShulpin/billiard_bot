@@ -55,4 +55,5 @@ class TournamentRegistration:
     full_name: str
     phone: str
     created_at: datetime
+    tournament_type: str = 'legacy'  # russian, pool, legacy
     status: str = 'active'  # active, cancelled
