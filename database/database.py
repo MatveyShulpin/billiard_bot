@@ -100,14 +100,27 @@ def init_db():
                 username TEXT,
                 full_name TEXT NOT NULL,
                 phone TEXT NOT NULL,
+                tournament_type TEXT DEFAULT 'legacy',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status TEXT DEFAULT 'active'
             )
         """)
+
+        cursor.execute("PRAGMA table_info(tournament_registrations)")
+        tournament_columns = [row['name'] for row in cursor.fetchall()]
+        if 'tournament_type' not in tournament_columns:
+            cursor.execute("""
+                ALTER TABLE tournament_registrations
+                ADD COLUMN tournament_type TEXT DEFAULT 'legacy'
+            """)
         
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_tournament_status 
             ON tournament_registrations(status)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tournament_type_status 
+            ON tournament_registrations(tournament_type, status)
         """)
         
         # Проверка наличия столов
