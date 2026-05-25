@@ -276,8 +276,18 @@ class TableRepository:
 class TournamentRepository:
     """Репозиторий для работы с регистрациями на турнир"""
     
-    TOURNAMENT_DATE = datetime(2026, 2, 23)  # Дата турнира
+    TOURNAMENT_DATE = datetime(2026, 6, 7, 15, 0)  # Дата и время турниров
+    TOURNAMENT_DATE_TEXT = "7 июня 2026, 15:00"
     MAX_PARTICIPANTS = 16  # Максимум участников
+    TOURNAMENT_TYPES = {
+        'russian': 'Турнир по русскому',
+        'pool': 'Турнир по пулу',
+    }
+    
+    @staticmethod
+    def get_tournament_name(tournament_type: str) -> str:
+        """Получение названия турнира"""
+        return TournamentRepository.TOURNAMENT_TYPES.get(tournament_type, 'Турнир')
     
     @staticmethod
     def create_registration(registration: 'TournamentRegistration') -> int:
@@ -286,62 +296,90 @@ class TournamentRepository:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO tournament_registrations 
-                (user_id, username, full_name, phone, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                (user_id, username, full_name, phone, tournament_type, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 registration.user_id,
                 registration.username,
                 registration.full_name,
                 registration.phone,
+                registration.tournament_type,
                 registration.created_at
             ))
             return cursor.lastrowid
     
     @staticmethod
-    def get_active_registrations_count() -> int:
+    def get_active_registrations_count(tournament_type: Optional[str] = None) -> int:
         """Получение количества активных регистраций"""
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT COUNT(*) as count FROM tournament_registrations 
-                WHERE status = 'active'
-            """)
+            if tournament_type:
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM tournament_registrations 
+                    WHERE status = 'active' AND tournament_type = ?
+                """, (tournament_type,))
+            else:
+                cursor.execute("""
+                    SELECT COUNT(*) as count FROM tournament_registrations 
+                    WHERE status = 'active'
+                """)
             return cursor.fetchone()['count']
     
     @staticmethod
-    def get_all_registrations() -> List['TournamentRegistration']:
+    def get_all_registrations(tournament_type: Optional[str] = None) -> List['TournamentRegistration']:
         """Получение всех регистраций"""
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM tournament_registrations 
-                ORDER BY created_at
-            """)
+            if tournament_type:
+                cursor.execute("""
+                    SELECT * FROM tournament_registrations 
+                    WHERE tournament_type = ?
+                    ORDER BY created_at
+                """, (tournament_type,))
+            else:
+                cursor.execute("""
+                    SELECT * FROM tournament_registrations 
+                    ORDER BY tournament_type, created_at
+                """)
             rows = cursor.fetchall()
             return [TournamentRepository._row_to_registration(row) for row in rows]
     
     @staticmethod
-    def get_active_registrations() -> List['TournamentRegistration']:
+    def get_active_registrations(tournament_type: Optional[str] = None) -> List['TournamentRegistration']:
         """Получение активных регистраций"""
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM tournament_registrations 
-                WHERE status = 'active'
-                ORDER BY created_at
-            """)
+            if tournament_type:
+                cursor.execute("""
+                    SELECT * FROM tournament_registrations 
+                    WHERE status = 'active' AND tournament_type = ?
+                    ORDER BY created_at
+                """, (tournament_type,))
+            else:
+                cursor.execute("""
+                    SELECT * FROM tournament_registrations 
+                    WHERE status = 'active'
+                    ORDER BY tournament_type, created_at
+                """)
             rows = cursor.fetchall()
             return [TournamentRepository._row_to_registration(row) for row in rows]
     
     @staticmethod
-    def get_user_registration(user_id: int) -> Optional['TournamentRegistration']:
+    def get_user_registration(user_id: int, tournament_type: Optional[str] = None) -> Optional['TournamentRegistration']:
         """Получение регистрации пользователя"""
         with get_db() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM tournament_registrations 
-                WHERE user_id = ? AND status = 'active'
-            """, (user_id,))
+            if tournament_type:
+                cursor.execute("""
+                    SELECT * FROM tournament_registrations 
+                    WHERE user_id = ? AND tournament_type = ? AND status = 'active'
+                """, (user_id, tournament_type))
+            else:
+                cursor.execute("""
+                    SELECT * FROM tournament_registrations 
+                    WHERE user_id = ? AND status = 'active'
+                    ORDER BY created_at
+                """, (user_id,))
             row = cursor.fetchone()
             return TournamentRepository._row_to_registration(row) if row else None
     
@@ -369,9 +407,9 @@ class TournamentRepository:
             return cursor.rowcount > 0
     
     @staticmethod
-    def is_slots_available() -> bool:
+    def is_slots_available(tournament_type: Optional[str] = None) -> bool:
         """Проверка наличия свободных мест"""
-        count = TournamentRepository.get_active_registrations_count()
+        count = TournamentRepository.get_active_registrations_count(tournament_type)
         return count < TournamentRepository.MAX_PARTICIPANTS
     
     @staticmethod
@@ -385,6 +423,7 @@ class TournamentRepository:
             full_name=row['full_name'],
             phone=row['phone'],
             created_at=datetime.fromisoformat(row['created_at']),
+            tournament_type=row['tournament_type'],
             status=row['status']
         )
 
