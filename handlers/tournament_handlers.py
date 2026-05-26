@@ -83,21 +83,23 @@ async def send_tournament_registration_start(
     # Проверка наличия свободных мест
     if not TournamentRepository.is_slots_available(tournament_type):
         active_count = TournamentRepository.get_active_registrations_count(tournament_type)
+        max_participants = TournamentRepository.get_max_participants(tournament_type)
         await message.answer(
             f"❌ К сожалению, все места на {tournament_name} заняты!\n\n"
-            f"Зарегистрировано: {active_count}/{TournamentRepository.MAX_PARTICIPANTS}",
+            f"Зарегистрировано: {active_count}/{max_participants}",
             reply_markup=get_main_menu_keyboard(settings.is_admin(user_id))
         )
         return
     
     # Информация о турнире
     active_count = TournamentRepository.get_active_registrations_count(tournament_type)
-    remaining = TournamentRepository.MAX_PARTICIPANTS - active_count
+    max_participants = TournamentRepository.get_max_participants(tournament_type)
+    remaining = max_participants - active_count
     
     await message.answer(
         f"🏆 Регистрация на {tournament_name}\n\n"
         f"📅 Дата и время: {TournamentRepository.TOURNAMENT_DATE_TEXT}\n"
-        f"👥 Свободных мест: {remaining}/{TournamentRepository.MAX_PARTICIPANTS}\n\n"
+        f"👥 Свободных мест: {remaining}/{max_participants}\n\n"
         f"Для регистрации введите ваше полное имя:",
         reply_markup=get_cancel_keyboard()
     )
@@ -226,6 +228,7 @@ async def confirm_tournament_registration(callback: CallbackQuery, state: FSMCon
     
     registration_id = TournamentRepository.create_registration(registration)
     active_count = TournamentRepository.get_active_registrations_count(tournament_type)
+    max_participants = TournamentRepository.get_max_participants(tournament_type)
     
     # Уведомление администраторов
     admin_text = (
@@ -235,7 +238,7 @@ async def confirm_tournament_registration(callback: CallbackQuery, state: FSMCon
         f"👤 {data['full_name']}\n"
         f"📱 {data['phone']}\n"
         f"💬 @{callback.from_user.username or 'без username'}\n\n"
-        f"📊 Всего зарегистрировано: {active_count}/{TournamentRepository.MAX_PARTICIPANTS}"
+        f"📊 Всего зарегистрировано: {active_count}/{max_participants}"
     )
     
     for admin_id in settings.ADMIN_IDS:
