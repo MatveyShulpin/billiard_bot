@@ -279,6 +279,10 @@ class TournamentRepository:
     TOURNAMENT_DATE = datetime(2026, 6, 7, 15, 0)  # Дата и время турниров
     TOURNAMENT_DATE_TEXT = "7 июня 2026, 15:00"
     MAX_PARTICIPANTS = 16  # Максимум участников
+    MAX_PARTICIPANTS_BY_TYPE = {
+        'russian': 8,
+        'pool': 16,
+    }
     TOURNAMENT_TYPES = {
         'russian': 'Турнир по русскому',
         'pool': 'Турнир по пулу',
@@ -288,6 +292,16 @@ class TournamentRepository:
     def get_tournament_name(tournament_type: str) -> str:
         """Получение названия турнира"""
         return TournamentRepository.TOURNAMENT_TYPES.get(tournament_type, 'Турнир')
+
+    @staticmethod
+    def get_max_participants(tournament_type: Optional[str] = None) -> int:
+        """Получение лимита участников для турнира"""
+        if tournament_type:
+            return TournamentRepository.MAX_PARTICIPANTS_BY_TYPE.get(
+                tournament_type,
+                TournamentRepository.MAX_PARTICIPANTS
+            )
+        return TournamentRepository.MAX_PARTICIPANTS
     
     @staticmethod
     def create_registration(registration: 'TournamentRegistration') -> int:
@@ -410,7 +424,7 @@ class TournamentRepository:
     def is_slots_available(tournament_type: Optional[str] = None) -> bool:
         """Проверка наличия свободных мест"""
         count = TournamentRepository.get_active_registrations_count(tournament_type)
-        return count < TournamentRepository.MAX_PARTICIPANTS
+        return count < TournamentRepository.get_max_participants(tournament_type)
     
     @staticmethod
     def _row_to_registration(row) -> 'TournamentRegistration':
