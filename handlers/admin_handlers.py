@@ -601,9 +601,10 @@ async def admin_view_tournament(callback: CallbackQuery):
         if registrations:
             has_registrations = True
         
+        max_participants = TournamentRepository.get_max_participants(tournament_type)
         section = f"🏆 {tournament_name}\n"
         section += f"📅 {TournamentRepository.TOURNAMENT_DATE_TEXT}\n"
-        section += f"✅ Активных: {len(active_registrations)}/{TournamentRepository.MAX_PARTICIPANTS}\n"
+        section += f"✅ Активных: {len(active_registrations)}/{max_participants}\n"
         section += f"❌ Отменённых: {len(cancelled_registrations)}\n\n"
         
         if active_registrations:
