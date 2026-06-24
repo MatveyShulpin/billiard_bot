@@ -323,8 +323,8 @@ def get_tournament_type_keyboard() -> InlineKeyboardMarkup:
     """Клавиатура выбора турнира"""
     builder = InlineKeyboardBuilder()
     
-    builder.button(text="Турнир по русскому 8чел", callback_data="tournament_select:russian")
-    builder.button(text="Турнир по пулу 16 чел", callback_data="tournament_select:pool")
+    builder.button(text="🏆 Турнир по русскому", callback_data="tournament_select:russian")
+    builder.button(text="🏆 Турнир по пулу", callback_data="tournament_select:pool")
     builder.button(text="🏠 Главное меню", callback_data="main_menu")
     builder.adjust(1)
     
