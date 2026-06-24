@@ -284,8 +284,8 @@ class TournamentRepository:
         'pool': 16,
     }
     TOURNAMENT_TYPES = {
-        'russian': '🏆 Турнир по русскому',
-        'pool': '🏆 Турнир по пулу',
+        'russian': 'Турнир по русскому',
+        'pool': 'Турнир по пулу',
     }
     
     @staticmethod
