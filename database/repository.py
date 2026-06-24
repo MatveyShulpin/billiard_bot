@@ -277,6 +277,7 @@ class TournamentRepository:
     """Репозиторий для работы с регистрациями на турнир"""
     
     TOURNAMENT_DATE = datetime(2026, 7, 5, 15, 0)  # Дата и время турниров
+    TOURNAMENT_EVENT = TOURNAMENT_DATE.strftime("%Y-%m-%d-%H-%M")
     TOURNAMENT_DATE_TEXT = "05.07 15:00"
     MAX_PARTICIPANTS = 16  # Максимум участников
     MAX_PARTICIPANTS_BY_TYPE = {
@@ -284,8 +285,8 @@ class TournamentRepository:
         'pool': 16,
     }
     TOURNAMENT_TYPES = {
-        'russian': 'Турнир по русскому',
-        'pool': 'Турнир по пулу',
+        'russian': 'Турнир по русскому 8чел',
+        'pool': 'Турнир по пулу 16 чел',
     }
     
     @staticmethod
@@ -310,14 +311,15 @@ class TournamentRepository:
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO tournament_registrations 
-                (user_id, username, full_name, phone, tournament_type, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (user_id, username, full_name, phone, tournament_type, tournament_event, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, (
                 registration.user_id,
                 registration.username,
                 registration.full_name,
                 registration.phone,
                 registration.tournament_type,
+                getattr(registration, 'tournament_event', TournamentRepository.TOURNAMENT_EVENT),
                 registration.created_at
             ))
             return cursor.lastrowid
@@ -330,13 +332,13 @@ class TournamentRepository:
             if tournament_type:
                 cursor.execute("""
                     SELECT COUNT(*) as count FROM tournament_registrations 
-                    WHERE status = 'active' AND tournament_type = ?
-                """, (tournament_type,))
+                    WHERE status = 'active' AND tournament_type = ? AND tournament_event = ?
+                """, (tournament_type, TournamentRepository.TOURNAMENT_EVENT))
             else:
                 cursor.execute("""
                     SELECT COUNT(*) as count FROM tournament_registrations 
-                    WHERE status = 'active'
-                """)
+                    WHERE status = 'active' AND tournament_event = ?
+                """, (TournamentRepository.TOURNAMENT_EVENT,))
             return cursor.fetchone()['count']
     
     @staticmethod
@@ -347,14 +349,15 @@ class TournamentRepository:
             if tournament_type:
                 cursor.execute("""
                     SELECT * FROM tournament_registrations 
-                    WHERE tournament_type = ?
+                    WHERE tournament_type = ? AND tournament_event = ?
                     ORDER BY created_at
-                """, (tournament_type,))
+                """, (tournament_type, TournamentRepository.TOURNAMENT_EVENT))
             else:
                 cursor.execute("""
                     SELECT * FROM tournament_registrations 
+                    WHERE tournament_event = ?
                     ORDER BY tournament_type, created_at
-                """)
+                """, (TournamentRepository.TOURNAMENT_EVENT,))
             rows = cursor.fetchall()
             return [TournamentRepository._row_to_registration(row) for row in rows]
     
@@ -366,15 +369,15 @@ class TournamentRepository:
             if tournament_type:
                 cursor.execute("""
                     SELECT * FROM tournament_registrations 
-                    WHERE status = 'active' AND tournament_type = ?
+                    WHERE status = 'active' AND tournament_type = ? AND tournament_event = ?
                     ORDER BY created_at
-                """, (tournament_type,))
+                """, (tournament_type, TournamentRepository.TOURNAMENT_EVENT))
             else:
                 cursor.execute("""
                     SELECT * FROM tournament_registrations 
-                    WHERE status = 'active'
+                    WHERE status = 'active' AND tournament_event = ?
                     ORDER BY tournament_type, created_at
-                """)
+                """, (TournamentRepository.TOURNAMENT_EVENT,))
             rows = cursor.fetchall()
             return [TournamentRepository._row_to_registration(row) for row in rows]
     
@@ -386,17 +389,17 @@ class TournamentRepository:
             if tournament_type:
                 cursor.execute("""
                     SELECT * FROM tournament_registrations 
-                    WHERE user_id = ? AND tournament_type = ? AND status = 'active'
-                """, (user_id, tournament_type))
+                    WHERE user_id = ? AND tournament_type = ? AND status = 'active' AND tournament_event = ?
+                """, (user_id, tournament_type, TournamentRepository.TOURNAMENT_EVENT))
             else:
                 cursor.execute("""
                     SELECT * FROM tournament_registrations 
-                    WHERE user_id = ? AND status = 'active'
+                    WHERE user_id = ? AND status = 'active' AND tournament_event = ?
                     ORDER BY created_at
-                """, (user_id,))
+                """, (user_id, TournamentRepository.TOURNAMENT_EVENT))
             row = cursor.fetchone()
             return TournamentRepository._row_to_registration(row) if row else None
-    
+
     @staticmethod
     def get_registration_by_id(registration_id: int) -> Optional['TournamentRegistration']:
         """Получение регистрации по ID"""
@@ -404,11 +407,11 @@ class TournamentRepository:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT * FROM tournament_registrations 
-                WHERE id = ?
-            """, (registration_id,))
+                WHERE id = ? AND tournament_event = ?
+            """, (registration_id, TournamentRepository.TOURNAMENT_EVENT))
             row = cursor.fetchone()
             return TournamentRepository._row_to_registration(row) if row else None
-    
+
     @staticmethod
     def cancel_registration(registration_id: int) -> bool:
         """Отмена регистрации"""
@@ -416,8 +419,8 @@ class TournamentRepository:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE tournament_registrations SET status = 'cancelled' 
-                WHERE id = ? AND status = 'active'
-            """, (registration_id,))
+                WHERE id = ? AND status = 'active' AND tournament_event = ?
+            """, (registration_id, TournamentRepository.TOURNAMENT_EVENT))
             return cursor.rowcount > 0
     
     @staticmethod
@@ -430,6 +433,7 @@ class TournamentRepository:
     def _row_to_registration(row) -> 'TournamentRegistration':
         """Преобразование строки БД в объект TournamentRegistration"""
         from database.models import TournamentRegistration
+        row_keys = row.keys()
         return TournamentRegistration(
             id=row['id'],
             user_id=row['user_id'],
@@ -438,6 +442,7 @@ class TournamentRepository:
             phone=row['phone'],
             created_at=datetime.fromisoformat(row['created_at']),
             tournament_type=row['tournament_type'],
+            tournament_event=row['tournament_event'] if 'tournament_event' in row_keys else 'legacy',
             status=row['status']
         )
 
