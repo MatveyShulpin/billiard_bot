@@ -223,7 +223,8 @@ async def confirm_tournament_registration(callback: CallbackQuery, state: FSMCon
         full_name=data['full_name'],
         phone=data['phone'],
         created_at=datetime.now(),
-        tournament_type=tournament_type
+        tournament_type=tournament_type,
+        tournament_event=TournamentRepository.TOURNAMENT_EVENT
     )
     
     registration_id = TournamentRepository.create_registration(registration)
