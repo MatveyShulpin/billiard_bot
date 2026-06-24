@@ -276,16 +276,16 @@ class TableRepository:
 class TournamentRepository:
     """Репозиторий для работы с регистрациями на турнир"""
     
-    TOURNAMENT_DATE = datetime(2026, 6, 7, 15, 0)  # Дата и время турниров
-    TOURNAMENT_DATE_TEXT = "7 июня 2026, 15:00"
+    TOURNAMENT_DATE = datetime(2026, 7, 5, 15, 0)  # Дата и время турниров
+    TOURNAMENT_DATE_TEXT = "05.07 15:00"
     MAX_PARTICIPANTS = 16  # Максимум участников
     MAX_PARTICIPANTS_BY_TYPE = {
         'russian': 8,
         'pool': 16,
     }
     TOURNAMENT_TYPES = {
-        'russian': 'Турнир по русскому',
-        'pool': 'Турнир по пулу',
+        'russian': 'Турнир по русскому 8чел',
+        'pool': 'Турнир по пулу 16 чел',
     }
     
     @staticmethod
