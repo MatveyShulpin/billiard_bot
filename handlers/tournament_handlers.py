@@ -22,7 +22,7 @@ from states.booking_states import TournamentStates
 logger = logging.getLogger(__name__)
 router = Router()
 
-TOURNAMENT_MENU_BUTTONS = {"🏆 Турнир 07.06", "Турнир 07.06"}
+TOURNAMENT_MENU_BUTTONS = {"🏆 Турнир 05.07", "Турнир 05.07"}
 
 
 @router.message(F.text.in_(TOURNAMENT_MENU_BUTTONS))
@@ -31,7 +31,7 @@ async def show_tournament_selection(message: Message, state: FSMContext):
     await state.clear()
     
     await message.answer(
-        f"🏆 Турнир 07.06\n\n"
+        f"🏆 Турнир 05.07\n\n"
         f"📅 Дата и время: {TournamentRepository.TOURNAMENT_DATE_TEXT}\n\n"
         f"Выберите дисциплину:",
         reply_markup=get_tournament_type_keyboard()
