@@ -63,7 +63,7 @@ def get_available_dates() -> List[datetime]:
     """Получение списка доступных дат для бронирования"""
     dates = []
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    tournament_date = datetime(2026, 6, 7).date()  # Дата турниров
+    tournament_date = datetime(2026, 7, 5).date()  # Дата турниров
     
     for i in range(settings.MAX_BOOKING_DAYS):
         date = today + timedelta(days=i)
