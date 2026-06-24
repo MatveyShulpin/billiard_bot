@@ -101,6 +101,7 @@ def init_db():
                 full_name TEXT NOT NULL,
                 phone TEXT NOT NULL,
                 tournament_type TEXT DEFAULT 'legacy',
+                tournament_event TEXT DEFAULT 'legacy',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 status TEXT DEFAULT 'active'
             )
@@ -113,6 +114,11 @@ def init_db():
                 ALTER TABLE tournament_registrations
                 ADD COLUMN tournament_type TEXT DEFAULT 'legacy'
             """)
+        if 'tournament_event' not in tournament_columns:
+            cursor.execute("""
+                ALTER TABLE tournament_registrations
+                ADD COLUMN tournament_event TEXT DEFAULT 'legacy'
+            """)
         
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_tournament_status 
@@ -121,6 +127,10 @@ def init_db():
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_tournament_type_status 
             ON tournament_registrations(tournament_type, status)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tournament_event_type_status 
+            ON tournament_registrations(tournament_event, tournament_type, status)
         """)
         
         # Проверка наличия столов
