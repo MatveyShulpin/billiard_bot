@@ -33,6 +33,7 @@ async def main():
     
     # Создание бота и диспетчера
     bot = Bot(token=settings.BOT_TOKEN)
+    await bot.delete_webhook(drop_pending_updates=False)
     storage = MemoryStorage()
     dp = Dispatcher(storage=storage)
     
